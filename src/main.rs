@@ -1,7 +1,7 @@
 use clap::{Args, Parser, Subcommand};
 use sp1_core::{SP1Prover, SP1Stdin, SP1Verifier};
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, Write};
+use std::io::{BufRead, BufReader, Read, Seek, Write};
 use std::path::Path;
 use std::process::Command;
 use std::{io, fs};
@@ -108,7 +108,7 @@ fn main() {
             println!("'Proving with sp1 program in: {}", args.guest_path);
             // We create a temporary directory to edit the main and leave it as SP1 needs it
             copy_dir_all(&args.guest_path, "./.tmp_guest/").unwrap();
-            prepend_to_file("./.tmp_guest/src/main.rs", 
+            prepend_to_file("./.tmp_guest/src/main.rs",
             "#![no_main]\nsp1_zkvm::entrypoint!(main);\n").unwrap();
 
             /* 
@@ -162,8 +162,63 @@ fn main() {
 
             println!("succesfully generated and verified proof for the program!") 
         }
-        Commands::ProveJolt(_) => {
-            println!("Proving with jolt is not supported yet");
+        Commands::ProveJolt(args) => {
+            println!("'Proving with sp1 program in: {}", args.guest_path);
+            copy_dir_all(&args.guest_path, "./.tmp_guest/").unwrap();
+            prepend_to_file("./.tmp_guest/src/main.rs",
+                            "#![cfg_attr(feature = \"guest\", no_std)]\n#![no_main]")
+                .unwrap();
+
+            /*
+            #![cfg_attr(feature = "guest", no_std)]
+            #![no_main]
+
+            #[jolt::provable]
+            fn add(x: u32, y: u32) -> u32 {
+                x + y
+            }
+
+            #[jolt::provable]
+            fn mul(x: u32, y: u32) -> u32 {
+                x * y
+            }
+            */
+
         }
     }
+}
+fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::io::Error> {
+    // Open the input file
+    let input_file = File::open(input_filename)?;
+
+    // Create or open the output file
+    let mut output_file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(output_filename)?;
+
+    // Create a reader for the input file
+    let input_reader = BufReader::new(input_file);
+
+    // Iterate through each line in the input file
+    let mut previous_line = String::new();
+    for line in input_reader.lines() {
+        let current_line = line?;
+
+        // Write the line to the output file
+        writeln!(output_file, "{}", current_line)?;
+
+        // Check if the current line starts with "fn"
+        if current_line.trim().starts_with("fn") {
+            // If it does, write something to the previous line
+            writeln!(output_file, "#[jolt::provable]")?;
+            writeln!(output_file, "{}", previous_line)?;
+        }
+
+        // Store the current line to use in the next iteration
+        previous_line = current_line;
+    }
+
+    Ok(())
 }
