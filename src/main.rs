@@ -5,7 +5,6 @@ use std::io::{BufRead, BufReader, Read, Seek, Write};
 use std::path::Path;
 use std::process::Command;
 use std::{io, fs};
-
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -68,7 +67,6 @@ fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
     // Write the text to prepend followed by the existing content back to the file
     file.write_all(text_to_prepend.as_bytes())?;
     file.write_all(content.as_bytes())?;
-
     Ok(())
 }
 
@@ -165,26 +163,26 @@ fn main() {
         }
         Commands::ProveJolt(args) => {
             println!("'Proving with jolt program in: {}", args.guest_path);
-            copy_dir_all(&args.guest_path, "./tmp_guest/").unwrap();
-            prepend_to_file("./tmp_guest/guest/src/lib.rs",
+            copy_dir_all(&args.guest_path, "./tmp_guest/guest").unwrap();
+            prepend_to_file("./tmp_guest/guest/src/main.rs",
                             "#![cfg_attr(feature = \"guest\", no_std)]\n#![no_main]\n")
                 .unwrap();
-            process_file("./tmp_guest/guest/src/lib.rs", "./tmp_guest/guest/src/main.rs").unwrap();
-            create_guest_files("./tmp_guest").unwrap();
+            process_file("./tmp_guest/guest/src/main.rs", "./tmp_guest/guest/src/lib.rs").unwrap();
+            //create_guest_files("./tmp_guest").unwrap();
             //  Host part
             let guest_path = fs::canonicalize("./tmp_guest/").unwrap();
             // Build and run the Jolt program
-            let res = Command::new("sh")
-                .arg("-c")
-                .arg(format!("cd {}", "./tmp_guest"))
-                .arg("cargo run --release")
-                .status();
-            println!("{:?}", res.unwrap());
         }
     }
 }
 
 fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::io::Error> {
+    // Determine the output filename
+    let mut output_f = String::from(output_filename);
+    if output_filename.is_empty() {
+        output_f = String::from(input_filename);
+    }
+
     // Open the input file
     let input_file = File::open(input_filename)?;
 
@@ -193,7 +191,7 @@ fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::
         .write(true)
         .create(true)
         .truncate(true)
-        .open(output_filename)?;
+        .open(&output_f)?;
 
     // Create a reader for the input file
     let input_reader = BufReader::new(input_file);
@@ -202,17 +200,20 @@ fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::
     let mut previous_line = String::new();
     for line in input_reader.lines() {
         let current_line = line?;
+
+        // Write the line to the output file
+
         // Check if the current line starts with "fn"
         if current_line.trim().starts_with("fn") {
             // If it does, write something to the previous line
             writeln!(output_file, "#[jolt::provable]")?;
         }
-        // Write the line to the output file
         writeln!(output_file, "{}", current_line)?;
 
         // Store the current line to use in the next iteration
         previous_line = current_line;
     }
+
     Ok(())
 }
 
