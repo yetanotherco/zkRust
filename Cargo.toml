@@ -9,7 +9,7 @@ nightly = []
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
 sp1-core = { git = "https://github.com/succinctlabs/sp1.git", tag = "v0.0.2" }
-jolt = { package = "jolt-sdk", git = "https://github.com/a16z/jolt", version = "0.1.0"}
+jolt = { git = "https://github.com/a16z/jolt", version = "0.1.0"}
 
 
 [profile.release]

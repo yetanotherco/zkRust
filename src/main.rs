@@ -168,7 +168,7 @@ fn main() {
                             "#![cfg_attr(feature = \"guest\", no_std)]\n#![no_main]\n")
                 .unwrap();
             process_file("./tmp_guest/guest/src/main.rs", "./tmp_guest/guest/src/lib.rs").unwrap();
-            //create_guest_files("./tmp_guest").unwrap();
+            create_guest_files("./tmp_guest").unwrap();
             //  Host part
             let guest_path = fs::canonicalize("./tmp_guest/").unwrap();
             // Build and run the Jolt program
