@@ -4,7 +4,8 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, Write};
 use std::path::Path;
 use std::process::Command;
-use std::{io, fs};
+use std::{io, fs, thread};
+use core::time::Duration;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -126,16 +127,17 @@ fn main() {
 
             println!("Compiling program with RISC V ...");
             let guest_path = fs::canonicalize("./.tmp_guest/").unwrap();
+
+            println!("Guest path: {:?}", guest_path);
+
             Command::new("cargo")
                 .arg("prove")
                 .arg("build")
-                .arg("--release")
                 .current_dir(guest_path)
                 .output()
                 .expect("Prove build failed");
 
             println!("Compilation finished");
-
 
             let elf_canonical_path = fs::canonicalize("./.tmp_guest/elf/riscv32im-succinct-zkvm-elf").unwrap();
 
