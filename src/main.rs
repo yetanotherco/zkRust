@@ -94,8 +94,9 @@ fn add_dependency_to_toml(path: &str, dep_string: &str) -> io::Result<()> {
 
     Ok(())
 }
-const SP1_GUEST_DEPS_STRING: &str = "sp1-core = { git = \"https://github.com/succinctlabs/sp1.git\", tag = \"v0.0.2\" }\n";
+const SP1_GUEST_DEPS_STRING: &str = "sp1-zkvm = { git = \"https://github.com/succinctlabs/sp1.git\", tag = \"v0.0.2\" }\n";
 
+// sp1-zkvm = { git = "https://github.com/succinctlabs/sp1.git", tag = "v0.0.2" }
 const SP1_ELF_PATH: &str = ".tmp_guest/elf/riscv32im-succinct-zkvm-elf";
 
 fn main() {
@@ -122,17 +123,22 @@ fn main() {
 
             fs::canonicalize("../a/../foo.txt")?;
             */
+
+            println!("Compiling program with RISC V ...");
             let guest_path = fs::canonicalize("./.tmp_guest/").unwrap();
             Command::new("cargo")
                 .arg("prove")
                 .arg("build")
+                .arg("--release")
                 .current_dir(guest_path)
                 .output()
                 .expect("Prove build failed");
 
+            println!("Compilation finished");
+
+
             let elf_canonical_path = fs::canonicalize("./.tmp_guest/elf/riscv32im-succinct-zkvm-elf").unwrap();
 
-            println!("Elf: {:?}",elf_canonical_path);
 
             let mut f = File::open(&elf_canonical_path).expect("no file found");
             let metadata = fs::metadata(&elf_canonical_path).expect("unable to read metadata");
@@ -140,20 +146,32 @@ fn main() {
             f.read(&mut elf_data).expect("buffer overflow");
 
             let mut stdin = SP1Stdin::new();
-            let n = 500u32;
+            let n = 10u32;
             stdin.write(&n);
 
-            println!("Elf data: {:?}", elf_data);
+            println!("Proving ...");
+
+            // println!("Elf data: {:?}", elf_data);
             let mut proof = SP1Prover::prove(&elf_data, stdin).expect("proving failed");
 
+            println!("Proving finished");
+
+
             // Read output.
+            /* 
             let a = proof.stdout.read::<u32>();
             let b = proof.stdout.read::<u32>();
             println!("a: {}", a);
             println!("b: {}", b);
+            */
+
+            println!("Testing verification");
 
             // Verify proof.
             SP1Verifier::verify(&elf_data, &proof).expect("verification failed");
+
+            println!("Verified!");
+
 
             // Save proof.
             proof
