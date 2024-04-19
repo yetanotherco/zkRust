@@ -95,9 +95,10 @@ fn add_dependency_to_toml(path: &str, dep_string: &str) -> io::Result<()> {
     Ok(())
 }
 const SP1_GUEST_DEPS_STRING: &str = "sp1-core = { git = \"https://github.com/succinctlabs/sp1.git\", tag = \"v0.0.2\" }\n";
-
+const JOLT_GUEST_DEPS_STRING: &str = "jolt = 0.1.0\n";
+const JOLT_ELF_PATH: &str = "tmp_guest/elf/riscv32i-jolt-zkvm-elf";
 const SP1_ELF_PATH: &str = ".tmp_guest/elf/riscv32im-succinct-zkvm-elf";
-
+#[cfg_attr(not(feature = "stable"), feature(proc_macro_tracked_env))]
 fn main() {
     let cli = Cli::parse();
 
@@ -164,12 +165,21 @@ fn main() {
         }
         Commands::ProveJolt(args) => {
             println!("'Proving with jolt program in: {}", args.guest_path);
-            copy_dir_all(&args.guest_path, "./.tmp_guest/").unwrap();
-            prepend_to_file("./.tmp_guest/guest/src/lib.rs",
+            copy_dir_all(&args.guest_path, "./tmp_guest/").unwrap();
+            prepend_to_file("./tmp_guest/guest/src/lib.rs",
                             "#![cfg_attr(feature = \"guest\", no_std)]\n#![no_main]\n")
                 .unwrap();
-            process_file("./.tmp_guest/guest/src/lib.rs", "./.tmp_guest/guest/src/main.rs").unwrap();
-
+            process_file("./tmp_guest/guest/src/lib.rs", "./tmp_guest/guest/src/main.rs").unwrap();
+            create_guest_files("./tmp_guest").unwrap();
+            //  Host part
+            let guest_path = fs::canonicalize("./tmp_guest/").unwrap();
+            // Build and run the Jolt program
+            let res = Command::new("sh")
+                .arg("-c")
+                .arg(format!("cd {}", "./tmp_guest"))
+                .arg("cargo run --release")
+                .status();
+            println!("{:?}", res.unwrap());
         }
     }
 }
@@ -200,12 +210,72 @@ fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::
         // Write the line to the output file
         writeln!(output_file, "{}", current_line)?;
 
-
-
         // Store the current line to use in the next iteration
         previous_line = current_line;
     }
-
     Ok(())
 }
 
+
+fn create_guest_files(name: &str) -> Result<(), io::Error> {
+    let mut cargo_file = File::create(format!("{}/guest/Cargo.toml", name))?;
+    cargo_file.write_all(GUEST_CARGO.as_bytes())?;
+    Ok(())
+}
+const RUST_TOOLCHAIN: &str = r#"[toolchain]
+channel = "nightly-2023-09-22"
+targets = ["riscv32i-jolt-zkvm-elf"]
+"#;
+
+const HOST_CARGO_TEMPLATE: &str = r#"[package]
+name = "{NAME}"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = ["guest"]
+
+[profile.release]
+debug = 1
+codegen-units = 1
+lto = "fat"
+
+[dependencies]
+jolt = { package = "jolt-sdk", git = "https://github.com/a16z/jolt", features = ["std"] }
+guest = { path = "./guest" }
+
+[patch.crates-io]
+ark-ff = { git = "https://github.com/a16z/arkworks-algebra", branch = "optimize/field-from-u64" }
+ark-ec = { git = "https://github.com/a16z/arkworks-algebra", branch = "optimize/field-from-u64" }
+ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "optimize/field-from-u64" }
+"#;
+
+const HOST_MAIN: &str = r#"pub fn main() {
+    let (prove_{foo}, verify_{foo}) = guest::build_{foo}();
+
+    let param = {param};
+    let (output, proof) = prove_{foo}(param);
+    let is_valid = verify_{foo}(proof);
+
+    println!("output: {}", output);
+    println!("valid: {}", is_valid);
+}
+"#;
+
+const GITIGNORE: &str = "target";
+
+const GUEST_CARGO: &str = r#"[package]
+name = "guest"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "guest"
+path = "./src/lib.rs"
+
+[features]
+guest = []
+
+[dependencies]
+jolt = { package = "jolt-sdk", git = "https://github.com/a16z/jolt" }
+"#;
