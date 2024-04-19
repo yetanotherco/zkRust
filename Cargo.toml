@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
 sp1-core = { git = "https://github.com/succinctlabs/sp1.git", tag = "v0.0.2" }
+time = "0.3.35"
