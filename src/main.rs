@@ -163,30 +163,17 @@ fn main() {
             println!("succesfully generated and verified proof for the program!") 
         }
         Commands::ProveJolt(args) => {
-            println!("'Proving with sp1 program in: {}", args.guest_path);
+            println!("'Proving with jolt program in: {}", args.guest_path);
             copy_dir_all(&args.guest_path, "./.tmp_guest/").unwrap();
-            prepend_to_file("./.tmp_guest/src/main.rs",
-                            "#![cfg_attr(feature = \"guest\", no_std)]\n#![no_main]")
+            prepend_to_file("./.tmp_guest/guest/src/lib.rs",
+                            "#![cfg_attr(feature = \"guest\", no_std)]\n#![no_main]\n")
                 .unwrap();
-
-            /*
-            #![cfg_attr(feature = "guest", no_std)]
-            #![no_main]
-
-            #[jolt::provable]
-            fn add(x: u32, y: u32) -> u32 {
-                x + y
-            }
-
-            #[jolt::provable]
-            fn mul(x: u32, y: u32) -> u32 {
-                x * y
-            }
-            */
+            process_file("./.tmp_guest/guest/src/lib.rs", "./.tmp_guest/guest/src/main.rs").unwrap();
 
         }
     }
 }
+
 fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::io::Error> {
     // Open the input file
     let input_file = File::open(input_filename)?;
@@ -205,16 +192,15 @@ fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::
     let mut previous_line = String::new();
     for line in input_reader.lines() {
         let current_line = line?;
-
-        // Write the line to the output file
-        writeln!(output_file, "{}", current_line)?;
-
         // Check if the current line starts with "fn"
         if current_line.trim().starts_with("fn") {
             // If it does, write something to the previous line
             writeln!(output_file, "#[jolt::provable]")?;
-            writeln!(output_file, "{}", previous_line)?;
         }
+        // Write the line to the output file
+        writeln!(output_file, "{}", current_line)?;
+
+
 
         // Store the current line to use in the next iteration
         previous_line = current_line;
@@ -222,3 +208,4 @@ fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::
 
     Ok(())
 }
+

@@ -802,6 +802,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
+name = "jolt"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a69d5c0ce7b4ca602f6aaa148e928507672ed6952b9c8a2e39e4e4063213e226"
+
+[[package]]
 name = "js-sys"
 version = "0.3.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2269,5 +2275,6 @@ name = "zkRust"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "jolt",
  "sp1-core",
 ]
