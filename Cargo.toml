@@ -9,3 +9,4 @@ edition = "2021"
 clap = { version = "4.5.4", features = ["derive"] }
 sp1-core = { git = "https://github.com/succinctlabs/sp1.git", tag = "v0.0.2" }
 time = "0.3.35"
+risc0 = { git = "https://github.com/risc0/risc0.git", tag = "v0.21.0"}

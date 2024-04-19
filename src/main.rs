@@ -5,7 +5,8 @@ use std::io::{Read, Seek, Write};
 use std::path::Path;
 use std::process::Command;
 use std::{io, fs, thread};
-use core::time::Duration;
+use risc0::{default_prover, ExecutorEnv, Receipt};
+//use core::time::Duration;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -20,6 +21,7 @@ enum Commands {
     /// Adds files to myapp
     ProveSp1(ProofArgs),
     ProveJolt(ProofArgs),
+    ProveRisc0(ProofArgs),
 }
 
 #[derive(Args, Debug)]
@@ -99,6 +101,12 @@ const SP1_GUEST_DEPS_STRING: &str = "sp1-zkvm = { git = \"https://github.com/suc
 
 // sp1-zkvm = { git = "https://github.com/succinctlabs/sp1.git", tag = "v0.0.2" }
 const SP1_ELF_PATH: &str = ".tmp_guest/elf/riscv32im-succinct-zkvm-elf";
+
+const RISC0_GUEST_DEPS_STRING: &str = "risc0-zkvm = { git = \"https://github.com/risc0/risc0.git\", tag = \"v0.21.0\" }\n";
+
+// risc0-zkvm = risc0-zkvm = { git = "https://github.com/risc0/risc0.git\", tag = "v0.21.0" }
+const RISC0_ELF_PATH: &str = ".tmp_guest/elf/riscv32im-risc0-zkvm-elf";
+
 
 fn main() {
     let cli = Cli::parse();
@@ -182,6 +190,87 @@ fn main() {
 
             println!("succesfully generated and verified proof for the program!") 
         }
+        Commands::ProveRisc0(args) => {
+            println!("'Proving with risc0 program in: {}", args.guest_path);
+            // We create a temporary directory to edit the main and leave it as SP1 needs it
+            copy_dir_all(&args.guest_path, "./.tmp_guest/").unwrap();
+            prepend_to_file("./.tmp_guest/src/main.rs", 
+            "#![no_main]\nrisc0_zkvm::entrypoint!(main);\n").unwrap();
+
+            /* 
+            sp1-core = { git = "https://github.com/succinctlabs/sp1.git" }
+             */
+            add_dependency_to_toml("./.tmp_guest/Cargo.toml", RISC0_GUEST_DEPS_STRING).unwrap();
+
+            /* 
+            cd program
+            cargo prove build
+
+            fs::canonicalize("../a/../foo.txt")?;
+            */
+
+            println!("Compiling program with RISC V ...");
+            let guest_path = fs::canonicalize("./.tmp_guest/").unwrap();
+
+            println!("Guest path: {:?}", guest_path);
+
+            Command::new("cargo")
+                .arg("prove")
+                .arg("build")
+                .current_dir(guest_path)
+                .output()
+                .expect("Prove build failed");
+
+            println!("Compilation finished");
+
+            let elf_canonical_path = fs::canonicalize("./.tmp_guest/elf/riscv32im-risc0-zkvm-elf").unwrap();
+
+
+            let mut f = File::open(&elf_canonical_path).expect("no file found");
+            let metadata = fs::metadata(&elf_canonical_path).expect("unable to read metadata");
+                        let mut elf_data = vec![0; metadata.len() as usize];
+                        f.read(&mut elf_data).expect("buffer overflow");
+            // hasta aca veo
+                        //let mut stdin = SP1Stdin::new();
+                        let n = 10u32;
+                        writeln!(std::io::stdout(), "{}", n);
+
+                        println!("Proving ...");
+            // acaaaaa
+                        // println!("Elf data: {:?}", elf_data);
+                        let mut proof = default_prover::prove(&elf_data, &n).expect("proving failed");
+
+                        println!("Proving finished");
+
+
+            // Read output.
+            /* 
+            let a = proof.stdout.read::<u32>();
+            let b = proof.stdout.read::<u32>();
+            println!("a: {}", a);
+            println!("b: {}", b);
+            */
+
+
+            println!("Testing verification");
+
+            // Verify proof.
+            SP1Verifier::verify(&elf_data, &proof).expect("verification failed");
+
+            println!("Verified!");
+            
+            
+            let prover = default_prover();
+
+
+            // Save proof.
+            proof
+                .save("proof-with-io.json")
+                .expect("saving proof failed");
+
+            println!("succesfully generated and verified proof for the program!") 
+        }
+
         Commands::ProveJolt(_) => {
             println!("Proving with jolt is not supported yet");
         }
