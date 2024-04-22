@@ -108,7 +108,7 @@ fn main() {
             // We create a temporary directory to edit the main and leave it as SP1 needs it
             copy_dir_all(&args.guest_path, "./.tmp_guest/").unwrap();
             prepend_to_file("./.tmp_guest/src/main.rs",
-            "#![no_main]\nsp1_zkvm::entrypoint!(main);\n").unwrap();
+                            "#![no_main]\nsp1_zkvm::entrypoint!(main);\n").unwrap();
 
             /* 
             sp1-core = { git = "https://github.com/succinctlabs/sp1.git" }
@@ -131,7 +131,7 @@ fn main() {
 
             let elf_canonical_path = fs::canonicalize("./.tmp_guest/elf/riscv32im-succinct-zkvm-elf").unwrap();
 
-            println!("Elf: {:?}",elf_canonical_path);
+            println!("Elf: {:?}", elf_canonical_path);
 
             let mut f = File::open(&elf_canonical_path).expect("no file found");
             let metadata = fs::metadata(&elf_canonical_path).expect("unable to read metadata");
@@ -159,20 +159,9 @@ fn main() {
                 .save("proof-with-io.json")
                 .expect("saving proof failed");
 
-            println!("succesfully generated and verified proof for the program!") 
+            println!("succesfully generated and verified proof for the program!")
         }
         Commands::ProveJolt(args) => {
-
-            let (prove_fib, verify_fib) = guest::build_fib();
-
-            let (output, proof) = prove_fib(50);
-            let is_valid = verify_fib(proof);
-
-            println!
-            ("output: {}", output);
-            println!("valid: {}", is_valid);
-
-            /*
             println!("'Proving with jolt program in: {}", args.guest_path);
             copy_dir_all(&args.guest_path, "./tmp_guest/guest").unwrap();
             prepend_to_file("./tmp_guest/guest/src/main.rs",
@@ -183,13 +172,56 @@ fn main() {
             //  Host part
             let guest_path = fs::canonicalize("./tmp_guest/").unwrap();
             // Build and run the Jolt program
-             */
+            let file_content = fs::read_to_string("./tmp_guest/guest/src/lib.rs")
+                .expect("Unable to read file");
 
+            // Initialize variables to store function name and parameter
+            let mut func_name = String::new();
+            let mut param_list = String::new();
 
+            // Flag to indicate if we are inside a #[jolt::provable] function definition
+            let mut inside_provable_func = false;
 
+            // Parse the content to extract function names and parameters
+            for line in file_content.lines() {
+                // Check if the line contains #[jolt::provable]
+                if line.contains("#[jolt::provable]") {
+                    inside_provable_func = true;
+                    continue; // Skip to the next line
+                }
+
+                // If we are inside a #[jolt::provable] function definition
+                if inside_provable_func {
+                    // Check if the line contains a function definition
+                    if let Some(func) = line.strip_prefix("fn ") {
+                        if let Some(name) = func.split('(').next() {
+                            func_name = name.trim().to_string();
+                        }
+                        // Capture the parameter list
+                        if let Some(param) = line.strip_prefix("fn").and_then(|s| s.split('(').nth(1)) {
+                            param_list = param.trim().to_string();
+                        }
+                    }
+                    inside_provable_func = false; // Reset the flag
+                    continue; // Skip to the next line
+                }
+
+                if let Some(func) = line.strip_prefix("#[jolt::provable] fn ") {
+                    if let Some(name) = func.split('(').next() {
+                        func_name = name.trim().to_string();
+                    }
+                }
+            }
+            let host_main = HOST_MAIN
+                .replace("{foo}", &func_name)
+                .replace("{param}", &param_list);
+            // Execute the generated main function
+            println!("{}", host_main);
         }
     }
 }
+
+
 
 fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::io::Error> {
     // Determine the output filename
