@@ -7,6 +7,8 @@ use std::io::{BufRead, BufReader, Read, Seek, Write};
 use std::path::Path;
 use std::process::Command;
 use std::{io, fs};
+use std::fmt::{Debug, Pointer};
+use crate::Commands::ProveJolt;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -170,11 +172,11 @@ fn main() {
         }
         Commands::ProveJolt(args) => {
             println!("'Proving with jolt, program in: {}", args.guest_path);
-            copy_dir_all(&args.guest_path, "./tmp_guest/guest").unwrap();
-            prepend_to_file("./tmp_guest/guest/src/main.rs",
+            copy_dir_all(&args.guest_path, "./tmp_guest").unwrap();
+            prepend_to_file("./tmp_guest/src/main.rs",
                             "#![cfg_attr(feature = \"guest\", no_std)]\n#![no_main]\n")
                 .unwrap();
-            process_file("./tmp_guest/guest/src/main.rs", "./tmp_guest/guest/src/lib.rs").unwrap();
+            process_file("./tmp_guest/src/main.rs", "./tmp_guest/src/lib.rs").unwrap();
             create_guest_files("./tmp_guest").unwrap();
             //  Host part
             let mut host_main : String = String::from(HOST_MAIN);
@@ -192,6 +194,13 @@ fn main() {
             }
             host_main.push_str("\n}");
             println!("{}", host_main);
+            create_host_file("./tmp_guest/main.rs", host_main).unwrap();
+            let output = Command::new("cargo")
+                .current_dir("./tmp_guest") // Change to the correct directory
+                .arg("run")
+                .output()
+                .expect("Error running cargo");
+            println!("{:?}", output);
         }
     }
 }
@@ -262,7 +271,6 @@ fn parse_rust_file(file: &mut File) -> Result<Vec<(String, Vec<(String, String)>
             parsed_functions.push((name, params));
         }
     }
-
     Ok(parsed_functions)
 }
 fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::io::Error> {
@@ -295,7 +303,7 @@ fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::
         // Check if the current line starts with "fn"
         if current_line.trim().starts_with("fn") {
             // If it does, write something to the previous line
-            writeln!(output_file, "#[jolt::provable]")?;
+            //writeln!(output_file, "#[jolt::provable]")?;
         }
         writeln!(output_file, "{}", current_line)?;
 
@@ -305,10 +313,14 @@ fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::
 
     Ok(())
 }
-
+fn create_host_file(name: &str, host_main: String) -> Result<(), io::Error> {
+    let mut cargo_file = File::create(format!("{}", name))?;
+    cargo_file.write_all(host_main.as_ref())?;
+    Ok(())
+}
 
 fn create_guest_files(name: &str) -> Result<(), io::Error> {
-    let mut cargo_file = File::create(format!("{}/guest/Cargo.toml", name))?;
+    let mut cargo_file = File::create(format!("{}/Cargo.toml", name))?;
     cargo_file.write_all(GUEST_CARGO.as_bytes())?;
     Ok(())
 }
