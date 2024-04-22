@@ -5,7 +5,7 @@ sp1_zkvm::entrypoint!(main);
 use std::hint::black_box;
 
 fn fibonacci() -> u32 {
-    let n = 800;
+    let n = 2;
     let mut nums = vec![1, 1];
     for _ in 0..n {
         let mut c = nums[nums.len() - 1] + nums[nums.len() - 2];

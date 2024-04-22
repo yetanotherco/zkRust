@@ -24,3 +24,4 @@ ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "op
 debug = 1
 codegen-units = 1
 lto = "fat"
+
