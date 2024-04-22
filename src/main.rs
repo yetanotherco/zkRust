@@ -7,12 +7,6 @@ use std::io::{BufRead, BufReader, Read, Seek, Write};
 use std::path::Path;
 use std::process::Command;
 use std::{io, fs};
-use nom::{
-    IResult,
-    sequence::delimited,
-    character::complete::char,
-    bytes::complete::is_not
-};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -183,15 +177,12 @@ fn main() {
             process_file("./tmp_guest/guest/src/main.rs", "./tmp_guest/guest/src/lib.rs").unwrap();
             create_guest_files("./tmp_guest").unwrap();
             //  Host part
+            let mut host_main : String = String::from(HOST_MAIN);
             if let Ok(mut file) = File::open("./tmp_guest/guest/src/lib.rs") {
                 match parse_rust_file(&mut file) {
                     Ok(parsed_functions) => {
                         for (func_name, params) in parsed_functions {
-                            println!("Function: {}", func_name);
-                            println!("Parameters:");
-                            for (param_name, param_type) in params {
-                                println!("  {}: {}", param_name, param_type);
-                            }
+                            host_main.push_str(&*HOST_PROVE_VERIFY.replace("{foo}", &func_name));
                         }
                     }
                     Err(e) => eprintln!("Error parsing Rust file: {}", e),
@@ -199,6 +190,8 @@ fn main() {
             } else {
                 eprintln!("Error opening Rust file.");
             }
+            host_main.push_str("\n}");
+            println!("{}", host_main);
         }
     }
 }
@@ -321,17 +314,16 @@ fn create_guest_files(name: &str) -> Result<(), io::Error> {
 }
 
 const HOST_MAIN: &str = r#"pub fn main() {
+"#;
+const HOST_PROVE_VERIFY: &str = r#"
     let (prove_{foo}, verify_{foo}) = guest::build_{foo}();
 
-    let param = {param};
-    let (output, proof) = prove_{foo}(param);
+    let (output, proof) = prove_{foo}();
     let is_valid = verify_{foo}(proof);
 
     println!("output: {}", output);
     println!("valid: {}", is_valid);
-}
 "#;
-
 
 const GUEST_CARGO: &str = r#"[package]
 name = "guest"

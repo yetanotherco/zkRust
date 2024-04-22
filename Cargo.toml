@@ -10,7 +10,6 @@ nightly = []
 clap = { version = "4.5.4", features = ["derive"] }
 sp1-core = { git = "https://github.com/succinctlabs/sp1.git", tag = "v0.0.2" }
 jolt = { package = "jolt-sdk", git = "https://github.com/a16z/jolt", features = ["host"] }
-guest = { path = "./tmp_guest/guest" }
 regex = "1.10.4"
 nom = "7.1.3"
 bytes = "1.6.0"
