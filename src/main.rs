@@ -162,6 +162,17 @@ fn main() {
             println!("succesfully generated and verified proof for the program!") 
         }
         Commands::ProveJolt(args) => {
+
+            let (prove_fib, verify_fib) = guest::build_fib();
+
+            let (output, proof) = prove_fib(50);
+            let is_valid = verify_fib(proof);
+
+            println!
+            ("output: {}", output);
+            println!("valid: {}", is_valid);
+
+            /*
             println!("'Proving with jolt program in: {}", args.guest_path);
             copy_dir_all(&args.guest_path, "./tmp_guest/guest").unwrap();
             prepend_to_file("./tmp_guest/guest/src/main.rs",
@@ -172,6 +183,10 @@ fn main() {
             //  Host part
             let guest_path = fs::canonicalize("./tmp_guest/").unwrap();
             // Build and run the Jolt program
+             */
+
+
+
         }
     }
 }
