@@ -1,3 +1,5 @@
+#![feature(string_remove_matches)]
+
 use clap::{Args, Parser, Subcommand};
 use sp1_core::{SP1Prover, SP1Stdin, SP1Verifier};
 use std::fs::{File, OpenOptions};
@@ -5,6 +7,13 @@ use std::io::{BufRead, BufReader, Read, Seek, Write};
 use std::path::Path;
 use std::process::Command;
 use std::{io, fs};
+use nom::{
+    IResult,
+    sequence::delimited,
+    character::complete::char,
+    bytes::complete::is_not
+};
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -12,7 +21,11 @@ struct Cli {
     #[command(subcommand)]
     command: Commands,
 }
-
+struct Function {
+    name: String,
+    parameters: Vec<String>,
+    return_type: String,
+}
 #[derive(Subcommand)]
 enum Commands {
     /// Adds files to myapp
@@ -162,7 +175,7 @@ fn main() {
             println!("succesfully generated and verified proof for the program!")
         }
         Commands::ProveJolt(args) => {
-            println!("'Proving with jolt program in: {}", args.guest_path);
+            println!("'Proving with jolt, program in: {}", args.guest_path);
             copy_dir_all(&args.guest_path, "./tmp_guest/guest").unwrap();
             prepend_to_file("./tmp_guest/guest/src/main.rs",
                             "#![cfg_attr(feature = \"guest\", no_std)]\n#![no_main]\n")
@@ -170,59 +183,95 @@ fn main() {
             process_file("./tmp_guest/guest/src/main.rs", "./tmp_guest/guest/src/lib.rs").unwrap();
             create_guest_files("./tmp_guest").unwrap();
             //  Host part
-            let guest_path = fs::canonicalize("./tmp_guest/").unwrap();
-            // Build and run the Jolt program
-            let file_content = fs::read_to_string("./tmp_guest/guest/src/lib.rs")
-                .expect("Unable to read file");
-
-            // Initialize variables to store function name and parameter
-            let mut func_name = String::new();
-            let mut param_list = String::new();
-
-            // Flag to indicate if we are inside a #[jolt::provable] function definition
-            let mut inside_provable_func = false;
-
-            // Parse the content to extract function names and parameters
-            for line in file_content.lines() {
-                // Check if the line contains #[jolt::provable]
-                if line.contains("#[jolt::provable]") {
-                    inside_provable_func = true;
-                    continue; // Skip to the next line
-                }
-
-                // If we are inside a #[jolt::provable] function definition
-                if inside_provable_func {
-                    // Check if the line contains a function definition
-                    if let Some(func) = line.strip_prefix("fn ") {
-                        if let Some(name) = func.split('(').next() {
-                            func_name = name.trim().to_string();
-                        }
-                        // Capture the parameter list
-                        if let Some(param) = line.strip_prefix("fn").and_then(|s| s.split('(').nth(1)) {
-                            param_list = param.trim().to_string();
+            if let Ok(mut file) = File::open("./tmp_guest/guest/src/lib.rs") {
+                match parse_rust_file(&mut file) {
+                    Ok(parsed_functions) => {
+                        for (func_name, params) in parsed_functions {
+                            println!("Function: {}", func_name);
+                            println!("Parameters:");
+                            for (param_name, param_type) in params {
+                                println!("  {}: {}", param_name, param_type);
+                            }
                         }
                     }
-                    inside_provable_func = false; // Reset the flag
-                    continue; // Skip to the next line
+                    Err(e) => eprintln!("Error parsing Rust file: {}", e),
                 }
-
-                if let Some(func) = line.strip_prefix("#[jolt::provable] fn ") {
-                    if let Some(name) = func.split('(').next() {
-                        func_name = name.trim().to_string();
-                    }
-                }
+            } else {
+                eprintln!("Error opening Rust file.");
             }
-            let host_main = HOST_MAIN
-                .replace("{foo}", &func_name)
-                .replace("{param}", &param_list);
-            // Execute the generated main function
-            println!("{}", host_main);
         }
     }
 }
+fn parse_function(line: &str) -> Option<Function> {
+    let func_regex = r"fn\s+([a-zA-Z_]\w*)\s*\((.*?)\)\s*->\s*(.*?)\s*\{";
+    let param_regex = r"([a-zA-Z_]\w*)\s*:\s*\w+\s*(?:,|\))";
 
 
+    if let Some(captures) = regex::Regex::new(func_regex).unwrap().captures(line) {
+        let name = captures[1].to_string();
+        let param_list = &captures[2];
+        let return_type = captures[3].to_string();
 
+        let mut parameters = Vec::new();
+        for param in regex::Regex::new(param_regex).unwrap().captures_iter(param_list) {
+            let param_type = param[2].to_string();
+
+            parameters.push(param_type);
+        }
+        Some(Function {
+            name,
+            parameters,
+            return_type,
+        })
+    } else {
+        None
+    }
+}
+
+fn parse_rust_file(file: &mut File) -> Result<Vec<(String, Vec<(String, String)>)>, io::Error> {
+    let mut parsed_functions = Vec::new();
+    let mut inside_provable_func = false;
+    let mut current_function: Option<(String, Vec<(String, String)>)> = None;
+
+    for line in io::BufReader::new(file).lines() {
+        let line = line?;
+
+        // Check if the line contains #[jolt::provable]
+        if line.contains("#[jolt::provable]") {
+            inside_provable_func = true;
+            continue; // Skip to the next line
+        }
+
+        // If we are inside a #[jolt::provable] function definition
+        if inside_provable_func {
+            // Check if the line contains a function definition
+            if let Some(func) = line.strip_prefix("fn ") {
+                let mut func_parts = func.splitn(2, '(');
+                if let Some(name) = func_parts.next() {
+                    let name = name.trim().to_string();
+                    let mut param_types = Vec::new();
+                    if let Some(param_list) = func_parts.next() {
+                        for param in param_list.split(',') {
+                            if let Some((param_name, param_type)) = param.split_once(":") {
+                                let param_name = param_name.trim().to_string();
+                                let param_type = param_type.trim().to_string();
+                                param_types.push((param_name, param_type));
+                            }
+                        }
+                    }
+                    current_function = Some((name, param_types));
+                }
+            }
+            inside_provable_func = false; // Reset the flag
+        }
+
+        if let Some((name, params)) = current_function.take() {
+            parsed_functions.push((name, params));
+        }
+    }
+
+    Ok(parsed_functions)
+}
 fn process_file(input_filename: &str, output_filename: &str) -> Result<(), std::io::Error> {
     // Determine the output filename
     let mut output_f = String::from(output_filename);
@@ -270,33 +319,6 @@ fn create_guest_files(name: &str) -> Result<(), io::Error> {
     cargo_file.write_all(GUEST_CARGO.as_bytes())?;
     Ok(())
 }
-const RUST_TOOLCHAIN: &str = r#"[toolchain]
-channel = "nightly-2023-09-22"
-targets = ["riscv32i-jolt-zkvm-elf"]
-"#;
-
-const HOST_CARGO_TEMPLATE: &str = r#"[package]
-name = "{NAME}"
-version = "0.1.0"
-edition = "2021"
-
-[workspace]
-members = ["guest"]
-
-[profile.release]
-debug = 1
-codegen-units = 1
-lto = "fat"
-
-[dependencies]
-jolt = { package = "jolt-sdk", git = "https://github.com/a16z/jolt", features = ["std"] }
-guest = { path = "./guest" }
-
-[patch.crates-io]
-ark-ff = { git = "https://github.com/a16z/arkworks-algebra", branch = "optimize/field-from-u64" }
-ark-ec = { git = "https://github.com/a16z/arkworks-algebra", branch = "optimize/field-from-u64" }
-ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "optimize/field-from-u64" }
-"#;
 
 const HOST_MAIN: &str = r#"pub fn main() {
     let (prove_{foo}, verify_{foo}) = guest::build_{foo}();
@@ -310,7 +332,6 @@ const HOST_MAIN: &str = r#"pub fn main() {
 }
 "#;
 
-const GITIGNORE: &str = "target";
 
 const GUEST_CARGO: &str = r#"[package]
 name = "guest"
