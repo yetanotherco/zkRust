@@ -178,10 +178,9 @@ fn main() {
                             "#![cfg_attr(feature = \"guest\", no_std)]\n#![no_main]\n")
                 .unwrap();
             process_file("./guest/src/main.rs", "./guest/src/lib.rs").unwrap();
-            create_guest_files("./guest").unwrap();
             //  Host part
             let guest_path = fs::canonicalize("./guest/").expect("Failed to canonicalize guest path");
-            /*
+/*
             let (prove_fib, verify_fib) = guest::build_fib();
             let program_summary = guest::analyze_fib();
             program_summary
@@ -203,9 +202,8 @@ fn main() {
                     return;
                 }
             }
-            link_toolchain().expect("TODO: panic message");
             println!("ELF directory: {:?}", elf_canonical_path);
-            */
+*/
         }
     }
 }
@@ -337,11 +335,7 @@ fn toolchain_url() -> String {
         TOOLCHAIN_TAG, target,
     )
 }
-fn create_guest_files(name: &str) -> Result<(), io::Error> {
-    let mut cargo_file = File::create(format!("{}/Cargo.toml", name))?;
-    cargo_file.write_all(GUEST_CARGO.as_bytes())?;
-    Ok(())
-}
+
 
 const GUEST_CARGO: &str = r#"[package]
 name = "guest"
