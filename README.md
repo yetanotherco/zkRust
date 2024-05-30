@@ -2,7 +2,7 @@
 
 CLI tool to prove your rust code easily using either SP1 or Jolt
 
-We will add the ability to verifyt programs in ethereum testnet or aligned layer testnet
+We will add the ability to verify programs in ethereum testnet or aligned layer testnet
 
 # Acknowledgments 
 
