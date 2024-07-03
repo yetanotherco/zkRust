@@ -29,6 +29,8 @@ enum Commands {
 struct ProofArgs {
     guest_path: String,
     output_proof_path: String,
+    #[clap(long)]
+    std: bool
 }
 
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
@@ -134,6 +136,29 @@ fn add_dependency_to_toml(path: &str, dep_string: &str) -> io::Result<()> {
     Ok(())
 }
 
+fn replace_dependency_to_toml(path: &str, original_string: &str, replace_string: &str) -> io::Result<()> {
+    // Open the file in read write mode to read its existing content
+    let mut file = OpenOptions::new().read(true).write(true).open(path)?;
+
+    // Read the existing content of the file
+    let mut content = String::new();
+    file.read_to_string(&mut content)?;
+
+    println!("Toml Content: {}", content);
+
+    content = content.replace(original_string, replace_string);
+
+    println!("Toml Content after add: {}", content);
+
+    file.set_len(0)?;
+    file.seek(io::SeekFrom::Start(0))?;
+    file.write_all(content.as_bytes())?;
+    file.set_len(content.len() as u64)?;
+    file.flush()?;
+
+    Ok(())
+}
+
 fn add_header_to_main(path: &str, dep_string: &str) -> io::Result<()> {
     // Open the file in read write mode to read its existing content
     let mut file = OpenOptions::new().read(true).write(true).open(path)?;
@@ -195,30 +220,24 @@ const JOLT_HOST_TOOLCHAIN: &[u8] =
     b"[toolchain]\nchannel = \"nightly-2024-04-20\"\ntargets = [\"riscv32i-unknown-none-elf\"]";
 
 // Risc 0 File Additions
-const RISC0_GUEST_DIR: &str = "./.tmp_guest/guest";
+const RISC0_DIR: &str = "./.risc_zero/";
 
-const RISC0_GUEST_MAIN: &str = "./.tmp_guest/guest/src/main.rs";
+const RISC0_GUEST_DIR: &str = "./.risc_zero/methods/guest/src";
 
-const RISC0_GUEST_CARGO_TOML: &str = "./.tmp_guest/guest/Cargo.toml";
+const RISC0_GUEST_MAIN: &str = "./.risc_zero/methods/guest/src/main.rs";
 
-const RISC0_GUEST_PROGRAM_HEADER: &str =
-    "#![no_main]\n#![no_std]\nrisc0_zkvm::guest::entry!(main)\n";
+const RISC0_GUEST_CARGO_TOML: &str = "./.risc_zero/methods/guest/Cargo.toml";
 
-const RISC0_GUEST_DEPS_STRING: &str =
-    "\nrisc0-zkvm = { path = \"https://github.com/risc0/risc0.git\", default-features = false }\n";
+const RISC0_GUEST_PROGRAM_HEADER_NO_STD: &str =
+    "#![no_main]\n#![no_std]\nrisc0_zkvm::guest::entry!(main);\n";
 
-// Methods
+const RISC0_GUEST_PROGRAM_HEADER_STD: &str =
+    "#![no_main]\n\nrisc0_zkvm::guest::entry!(main);\n";
 
-const RISC0_METHOD_PATH: &str = "./.tmp_guest/}";
-
-const RISC0_LIB_FILE_PATH: &str = "./.tmp_guest/src/}";
-
-const RISC0_BUILD_FILE: &[u8] = b"fn main() {\nrisc0_build::embed_methods();\n}";
-
-//TODO: can we embed this into the executable???? -> I suspect yes
-const RISC0_LIB_FILE: &[u8] = b"include!(concat!(env!(\"OUT_DIR\"), \"/methods.rs\"));";
-
-const RISC0_CARGO_FILE: &[u8] = b"[package]\nname =\"methods\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[build-dependencies]\nrisc0-build = { path = \"../../../risc0/build\" }\n\n[package.metadata.risc0]\nmethods = [\"guest\"]";
+const RISC0_GUEST_DEPS_NO_STD: &str =
+    "default-features = false";
+const RISC0_GUEST_DEPS_STD: &str =
+    "features = [\"std\"]";
 
 fn main() {
     let cli = Cli::parse();
@@ -230,6 +249,9 @@ fn main() {
             println!("'Proving with sp1 program in: {}", args.guest_path);
             // We create a temporary directory to edit the main.rs
             copy_dir_all(&args.guest_path, TMP_GUEST_DIR).unwrap();
+
+            // Copy main file to risc0
+            // Add needed file header
             /*
                #![no_main]
                sp1_zkvm::entrypoint!(main);
@@ -240,6 +262,8 @@ fn main() {
             sp1-core = { git = "https://github.com/succinctlabs/sp1.git" }
              */
             add_dependency_to_toml(TMP_CARGO_TOML, SP1_GUEST_DEPS_STRING).unwrap();
+
+            //TODO: Update and add no_std/std flag
 
             /*
                 cd .tmp_guest
@@ -260,7 +284,6 @@ fn main() {
             // TODO: Write input to program.
             let stdin = SP1Stdin::new();
 
-            //println!("Elf data: {:?}", elf_data);
             let client = ProverClient::new();
             let (pk, vk) = client.setup(&elf_data);
             let proof = client.prove_compressed(&pk, stdin).expect("proving failed");
@@ -283,7 +306,9 @@ fn main() {
 
             println!("succesfully generated and verified proof for the program!")
         }
-        Commands::ProveJolt(args) => {
+        Commands::ProveJolt(_) => {
+            todo!("Support Jolt once the Verifier is merged on Aligned");
+        /*
             println!("'Proving with Jolt program in: {}", args.guest_path);
             /*
                Copy guest to guest directory structure
@@ -372,73 +397,44 @@ fn main() {
                 .output()
                 .expect("Prove build failed");
             println!("Elf and Proof generated!");
+        */
         }
         Commands::ProveRisc0(args) => {
             println!("'Proving with Risc0 program in: {}", args.guest_path);
             /*
-               Copy guest to guest directory structure
+               Copy guest to risc0 guest directory structure
             */
-            copy_dir_all(&args.guest_path, RISC0_GUEST_DIR).unwrap();
+            fs::create_dir_all(RISC0_GUEST_DIR).unwrap();
+
+            // Copy the source file to the destination directory
+            let guest_path = format!("{}/src/main.rs", args.guest_path);
+            println!("{:?}", guest_path);
+            fs::copy(&guest_path, &RISC0_GUEST_MAIN).unwrap();
             /*
                #![no_main]
                #![no_std]
                risc0_zkvm::guest::entry!(main);
             */
-            prepend_to_file(RISC0_GUEST_MAIN, RISC0_GUEST_PROGRAM_HEADER).unwrap();
+            if args.std {
+                println!("STD TRIGGERED");
+                prepend_to_file(RISC0_GUEST_MAIN, RISC0_GUEST_PROGRAM_HEADER_STD).unwrap();
+                replace_dependency_to_toml(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS_NO_STD, RISC0_GUEST_DEPS_STD).expect("failed to replace no_std dependency");
+                println!("FILE REPLACED");
+            } else {
+                println!("NO_STD TRIGGERED");
+                prepend_to_file(RISC0_GUEST_MAIN, RISC0_GUEST_PROGRAM_HEADER_NO_STD).unwrap();
+                replace_dependency_to_toml(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS_STD, RISC0_GUEST_DEPS_NO_STD).expect("failed to replace no_std dependency");
+                println!("FILE REPLACED");
+            }
 
-            /*
-               risc0-zkvm = { path = \"https://github.com/risc0/risc0.git\", default-features = false }
-            */
-            add_dependency_to_toml(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS_STRING).unwrap();
-
-            /*
-               create build.rs file
-            */
-            let mut build_file =
-                fs::File::create(&RISC0_METHOD_PATH).expect("Failed to create build.rs file");
-            build_file
-                .write_all(&RISC0_BUILD_FILE)
-                .expect("Failed to write to build.rs file");
-
-            /*
-                create lib.rs file
-            */
-            let src_dir = format!("{}/src", RISC0_METHOD_PATH);
-            fs::create_dir(&src_dir).expect("Failed to create src directory");
-            let mut lib_file =
-                fs::File::create(&RISC0_LIB_FILE_PATH).expect("Failed to create lib.rs file");
-            lib_file
-                .write_all(&RISC0_LIB_FILE)
-                .expect("Failed to write to lib.rs file");
-
-            /*
-                create cargo.toml
-            */
-            let mut toml_file =
-                fs::File::create(&RISC0_METHOD_PATH).expect("Failed to create Cargo.toml file");
-            toml_file
-                .write_all(&RISC0_CARGO_FILE)
-                .expect("Failed to write to Cargo.toml file");
-
-            // Obtain the default prover.
-            /*
-            let prover = default_prover();
-
-            let env = ExecutorEnv::builder().build().unwrap();
-
-            // Produce a receipt by proving the specified ELF binary.
-            let elf_data = fs::read(&RISC_0_ELF_PATH).expect("unable to read metadata");
-            let receipt = prover.prove(env, elf_data).unwrap().receipt;
-            let receipt_bytes = bincode::serialize(&receipt);
-            let image_id_bytes = bincode::serialize(&IMAGE_ID);
-            let mut receipt_file = fs::File::create("./receipt_file.bin").expect("Failed to create receipt file");
-            receipt_file.write_all("./receipt_file.bin").expect("Failed to write to receipt file");
-            let mut image_id_file = fs::File::create("./image_id.bin").expect("Failed to create image id file");
-            image_id_file.write_all("./image_id.bin").expect("Failed to write to image id file");
-            receipt.verify(IMAGE_ID).expect("Proof did not verify with associated image_id");
-            */
-
-            println!("generated proof");
+            let guest_path = fs::canonicalize(RISC0_DIR).unwrap();
+            Command::new("cargo")
+                .arg("run")
+                .arg("--release")
+                .current_dir(guest_path)
+                .output()
+                .expect("Prove build failed");
+            println!("Proof and IMAGE_ID generated!");
         }
     }
 }

@@ -688,7 +688,7 @@ dependencies = [
 [[package]]
 name = "binius_field"
 version = "0.1.0"
-source = "git+https://gitlab.com/UlvetannaOSS/binius#ad2d620e56dff3b18d502c6dafa557d6988ad920"
+source = "git+https://gitlab.com/UlvetannaOSS/binius#45e676b5333ff6bb2a3a2540e3c839c7cbe741ef"
 dependencies = [
  "binius_utils",
  "bytemuck",
@@ -706,7 +706,7 @@ dependencies = [
 [[package]]
 name = "binius_utils"
 version = "0.1.0"
-source = "git+https://gitlab.com/UlvetannaOSS/binius#ad2d620e56dff3b18d502c6dafa557d6988ad920"
+source = "git+https://gitlab.com/UlvetannaOSS/binius#45e676b5333ff6bb2a3a2540e3c839c7cbe741ef"
 dependencies = [
  "rayon",
  "tracing",
@@ -812,7 +812,7 @@ dependencies = [
 [[package]]
 name = "bonsai-sdk"
 version = "0.9.0-alpha.2"
-source = "git+https://github.com/risc0/risc0.git#a0c8a725c47a9d2e21189f7df030c968334852f3"
+source = "git+https://github.com/risc0/risc0.git#0767e982ddf3cbbf4342b0096d81c659d376f4c4"
 dependencies = [
  "duplicate",
  "maybe-async",
@@ -947,7 +947,7 @@ dependencies = [
  "iana-time-zone",
  "num-traits",
  "serde",
- "windows-targets 0.52.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -2065,9 +2065,9 @@ dependencies = [
 
 [[package]]
 name = "generic-array"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe739944a5406424e080edccb6add95685130b9f160d5407c639c7df0c5836b0"
+checksum = "152dd546e5bdac80844ce6befabb9af5784ce375cb6cea554aed99fe2d1fb169"
 dependencies = [
  "serde",
  "typenum",
@@ -2843,7 +2843,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e310b3a6b5907f99202fcdb4960ff45b93735d7c7d96b760fcff8db2dc0e103d"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -3605,7 +3605,7 @@ dependencies = [
  "libc",
  "redox_syscall",
  "smallvec",
- "windows-targets 0.52.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -4299,7 +4299,7 @@ dependencies = [
 [[package]]
 name = "risc0-binfmt"
 version = "1.1.0-alpha.1"
-source = "git+https://github.com/risc0/risc0.git#a0c8a725c47a9d2e21189f7df030c968334852f3"
+source = "git+https://github.com/risc0/risc0.git#0767e982ddf3cbbf4342b0096d81c659d376f4c4"
 dependencies = [
  "anyhow",
  "elf",
@@ -4312,7 +4312,7 @@ dependencies = [
 [[package]]
 name = "risc0-circuit-recursion"
 version = "1.1.0-alpha.1"
-source = "git+https://github.com/risc0/risc0.git#a0c8a725c47a9d2e21189f7df030c968334852f3"
+source = "git+https://github.com/risc0/risc0.git#0767e982ddf3cbbf4342b0096d81c659d376f4c4"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -4325,7 +4325,7 @@ dependencies = [
 [[package]]
 name = "risc0-circuit-rv32im"
 version = "1.1.0-alpha.1"
-source = "git+https://github.com/risc0/risc0.git#a0c8a725c47a9d2e21189f7df030c968334852f3"
+source = "git+https://github.com/risc0/risc0.git#0767e982ddf3cbbf4342b0096d81c659d376f4c4"
 dependencies = [
  "anyhow",
  "risc0-binfmt",
@@ -4339,7 +4339,7 @@ dependencies = [
 [[package]]
 name = "risc0-core"
 version = "1.1.0-alpha.1"
-source = "git+https://github.com/risc0/risc0.git#a0c8a725c47a9d2e21189f7df030c968334852f3"
+source = "git+https://github.com/risc0/risc0.git#0767e982ddf3cbbf4342b0096d81c659d376f4c4"
 dependencies = [
  "bytemuck",
  "rand_core 0.6.4",
@@ -4348,7 +4348,7 @@ dependencies = [
 [[package]]
 name = "risc0-groth16"
 version = "1.1.0-alpha.1"
-source = "git+https://github.com/risc0/risc0.git#a0c8a725c47a9d2e21189f7df030c968334852f3"
+source = "git+https://github.com/risc0/risc0.git#0767e982ddf3cbbf4342b0096d81c659d376f4c4"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -4367,7 +4367,7 @@ dependencies = [
 [[package]]
 name = "risc0-zkp"
 version = "1.1.0-alpha.1"
-source = "git+https://github.com/risc0/risc0.git#a0c8a725c47a9d2e21189f7df030c968334852f3"
+source = "git+https://github.com/risc0/risc0.git#0767e982ddf3cbbf4342b0096d81c659d376f4c4"
 dependencies = [
  "anyhow",
  "blake2",
@@ -4388,7 +4388,7 @@ dependencies = [
 [[package]]
 name = "risc0-zkvm"
 version = "1.1.0-alpha.1"
-source = "git+https://github.com/risc0/risc0.git#a0c8a725c47a9d2e21189f7df030c968334852f3"
+source = "git+https://github.com/risc0/risc0.git#0767e982ddf3cbbf4342b0096d81c659d376f4c4"
 dependencies = [
  "anyhow",
  "bincode",
@@ -4417,7 +4417,7 @@ dependencies = [
 [[package]]
 name = "risc0-zkvm-platform"
 version = "1.1.0-alpha.1"
-source = "git+https://github.com/risc0/risc0.git#a0c8a725c47a9d2e21189f7df030c968334852f3"
+source = "git+https://github.com/risc0/risc0.git#0767e982ddf3cbbf4342b0096d81c659d376f4c4"
 dependencies = [
  "bytemuck",
  "getrandom 0.2.15",
@@ -5036,7 +5036,7 @@ dependencies = [
  "curve25519-dalek",
  "elf",
  "elliptic-curve",
- "generic-array 1.0.0",
+ "generic-array 1.0.1",
  "hex",
  "itertools 0.13.0",
  "k256",
@@ -6302,7 +6302,7 @@ version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
 dependencies = [
- "windows-targets 0.52.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -6320,7 +6320,7 @@ version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
 dependencies = [
- "windows-targets 0.52.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -6340,18 +6340,18 @@ dependencies = [
 
 [[package]]
 name = "windows-targets"
-version = "0.52.5"
+version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f0713a46559409d202e70e28227288446bf7841d3211583a4b53e3f6d96e7eb"
+checksum = "9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973"
 dependencies = [
- "windows_aarch64_gnullvm 0.52.5",
- "windows_aarch64_msvc 0.52.5",
- "windows_i686_gnu 0.52.5",
+ "windows_aarch64_gnullvm 0.52.6",
+ "windows_aarch64_msvc 0.52.6",
+ "windows_i686_gnu 0.52.6",
  "windows_i686_gnullvm",
- "windows_i686_msvc 0.52.5",
- "windows_x86_64_gnu 0.52.5",
- "windows_x86_64_gnullvm 0.52.5",
- "windows_x86_64_msvc 0.52.5",
+ "windows_i686_msvc 0.52.6",
+ "windows_x86_64_gnu 0.52.6",
+ "windows_x86_64_gnullvm 0.52.6",
+ "windows_x86_64_msvc 0.52.6",
 ]
 
 [[package]]
@@ -6362,9 +6362,9 @@ checksum = "2b38e32f0abccf9987a4e3079dfb67dcd799fb61361e53e2882c3cbaf0d905d8"
 
 [[package]]
 name = "windows_aarch64_gnullvm"
-version = "0.52.5"
+version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7088eed71e8b8dda258ecc8bac5fb1153c5cffaf2578fc8ff5d61e23578d3263"
+checksum = "32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3"
 
 [[package]]
 name = "windows_aarch64_msvc"
@@ -6374,9 +6374,9 @@ checksum = "dc35310971f3b2dbbf3f0690a219f40e2d9afcf64f9ab7cc1be722937c26b4bc"
 
 [[package]]
 name = "windows_aarch64_msvc"
-version = "0.52.5"
+version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9985fd1504e250c615ca5f281c3f7a6da76213ebd5ccc9561496568a2752afb6"
+checksum = "09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469"
 
 [[package]]
 name = "windows_i686_gnu"
@@ -6386,15 +6386,15 @@ checksum = "a75915e7def60c94dcef72200b9a8e58e5091744960da64ec734a6c6e9b3743e"
 
 [[package]]
 name = "windows_i686_gnu"
-version = "0.52.5"
+version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88ba073cf16d5372720ec942a8ccbf61626074c6d4dd2e745299726ce8b89670"
+checksum = "8e9b5ad5ab802e97eb8e295ac6720e509ee4c243f69d781394014ebfe8bbfa0b"
 
 [[package]]
 name = "windows_i686_gnullvm"
-version = "0.52.5"
+version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87f4261229030a858f36b459e748ae97545d6f1ec60e5e0d6a3d32e0dc232ee9"
+checksum = "0eee52d38c090b3caa76c563b86c3a4bd71ef1a819287c19d586d7334ae8ed66"
 
 [[package]]
 name = "windows_i686_msvc"
@@ -6404,9 +6404,9 @@ checksum = "8f55c233f70c4b27f66c523580f78f1004e8b5a8b659e05a4eb49d4166cca406"
 
 [[package]]
 name = "windows_i686_msvc"
-version = "0.52.5"
+version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db3c2bf3d13d5b658be73463284eaf12830ac9a26a90c717b7f771dfe97487bf"
+checksum = "240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66"
 
 [[package]]
 name = "windows_x86_64_gnu"
@@ -6416,9 +6416,9 @@ checksum = "53d40abd2583d23e4718fddf1ebec84dbff8381c07cae67ff7768bbf19c6718e"
 
 [[package]]
 name = "windows_x86_64_gnu"
-version = "0.52.5"
+version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e4246f76bdeff09eb48875a0fd3e2af6aada79d409d33011886d3e1581517d9"
+checksum = "147a5c80aabfbf0c7d901cb5895d1de30ef2907eb21fbbab29ca94c5b08b1a78"
 
 [[package]]
 name = "windows_x86_64_gnullvm"
@@ -6428,9 +6428,9 @@ checksum = "0b7b52767868a23d5bab768e390dc5f5c55825b6d30b86c844ff2dc7414044cc"
 
 [[package]]
 name = "windows_x86_64_gnullvm"
-version = "0.52.5"
+version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "852298e482cd67c356ddd9570386e2862b5673c85bd5f88df9ab6802b334c596"
+checksum = "24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d"
 
 [[package]]
 name = "windows_x86_64_msvc"
@@ -6440,9 +6440,9 @@ checksum = "ed94fce61571a4006852b7389a063ab983c02eb1bb37b47f8272ce92d06d9538"
 
 [[package]]
 name = "windows_x86_64_msvc"
-version = "0.52.5"
+version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bec47e5bfd1bff0eeaf6d8b485cc1074891a197ab4225d504cb7a1ab88b02bf0"
+checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "winnow"
