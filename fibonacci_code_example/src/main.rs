@@ -1,7 +1,3 @@
-/* 
-#![no_main]
-sp1_zkvm::entrypoint!(main);
-*/
 use std::hint::black_box;
 
 fn fibonacci(n: u32) -> u32 {
@@ -15,6 +11,6 @@ fn fibonacci(n: u32) -> u32 {
 }
 
 pub fn main() {
-    let result = black_box(fibonacci(black_box(16000)));
+    let result = black_box(fibonacci(black_box(10)));
     println!("result: {}", result);
 }

@@ -1,5 +1,5 @@
 use clap::{Args, Parser, Subcommand};
-use sp1_core::{SP1Prover, SP1Stdin, SP1Verifier};
+use sp1_sdk::{ProverClient, SP1Stdin};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, Write};
 use std::path::Path;
@@ -68,6 +68,7 @@ fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
     // Write the text to prepend followed by the existing content back to the file
     file.write_all(text_to_prepend.as_bytes())?;
     file.write_all(content.as_bytes())?;
+    file.flush()?;
 
     Ok(())
 }
@@ -91,10 +92,11 @@ fn add_dependency_to_toml(path: &str, dep_string: &str) -> io::Result<()> {
     file.seek(io::SeekFrom::Start(0))?;
     file.write_all(content.as_bytes())?;
     file.set_len(content.len() as u64)?;
+    file.flush()?;
 
     Ok(())
 }
-const SP1_GUEST_DEPS_STRING: &str = "sp1-core = { git = \"https://github.com/succinctlabs/sp1.git\", tag = \"v0.0.2\" }\n";
+const SP1_GUEST_DEPS_STRING: &str = "sp1-zkvm = { git = \"https://github.com/succinctlabs/sp1.git\" }\n";
 
 const SP1_ELF_PATH: &str = ".tmp_guest/elf/riscv32im-succinct-zkvm-elf";
 
@@ -130,34 +132,43 @@ fn main() {
                 .output()
                 .expect("Prove build failed");
 
+
             let elf_canonical_path = fs::canonicalize("./.tmp_guest/elf/riscv32im-succinct-zkvm-elf").unwrap();
 
             println!("Elf: {:?}",elf_canonical_path);
 
-            let mut f = File::open(&elf_canonical_path).expect("no file found");
-            let metadata = fs::metadata(&elf_canonical_path).expect("unable to read metadata");
-            let mut elf_data = vec![0; metadata.len() as usize];
-            f.read(&mut elf_data).expect("buffer overflow");
+            let elf_data = fs::read(&elf_canonical_path).expect("unable to read metadata");
 
+            // TODO: Write input to program.
+            let stdin = SP1Stdin::new();
+            /*
+            let n = 10u32;
             let mut stdin = SP1Stdin::new();
-            let n = 500u32;
             stdin.write(&n);
+            */
 
-            println!("Elf data: {:?}", elf_data);
-            let mut proof = SP1Prover::prove(&elf_data, stdin).expect("proving failed");
+            //println!("Elf data: {:?}", elf_data);
+            let client = ProverClient::new();
+            let (pk, vk) = client.setup(&elf_data);
+            let proof = client.prove(&pk, stdin).expect("proving failed");
 
-            // Read output.
-            let a = proof.stdout.read::<u32>();
-            let b = proof.stdout.read::<u32>();
+            println!("generated proof");
+
+            // TODO: Read output from program.
+            /*
+            let _ = proof.public_values.read::<u32>();
+            let a = proof.public_values.read::<u32>();
+            let b = proof.public_values.read::<u32>();
             println!("a: {}", a);
             println!("b: {}", b);
+            */
 
             // Verify proof.
-            SP1Verifier::verify(&elf_data, &proof).expect("verification failed");
+            client.verify(&proof, &vk).expect("verification failed");
 
             // Save proof.
             proof
-                .save("proof-with-io.json")
+                .save("sp1_proof.json")
                 .expect("saving proof failed");
 
             println!("succesfully generated and verified proof for the program!") 
