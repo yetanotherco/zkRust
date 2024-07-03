@@ -1,12 +1,13 @@
 use clap::{Args, Parser, Subcommand};
+use regex::Regex;
+#[warn(unused_imports)]
+use risc0_zkvm::{default_prover, ExecutorEnv};
 use sp1_sdk::{ProverClient, SP1Stdin};
-use risc0_zkvm::{default_prover, ExecutorEnv, Receipt};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, Write};
 use std::path::Path;
 use std::process::Command;
-use std::{io, fs};
-use regex::Regex;
+use std::{fs, io};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -118,12 +119,11 @@ fn add_dependency_to_toml(path: &str, dep_string: &str) -> io::Result<()> {
     let mut content = String::new();
     file.read_to_string(&mut content)?;
 
-    println!("Toml Content: {}",content);
-
+    println!("Toml Content: {}", content);
 
     content = add_text_after_substring(&content, "[dependencies]", dep_string);
 
-    println!("Toml Content after add: {}",content);
+    println!("Toml Content after add: {}", content);
 
     file.set_len(0)?;
     file.seek(io::SeekFrom::Start(0))?;
@@ -142,13 +142,12 @@ fn add_header_to_main(path: &str, dep_string: &str) -> io::Result<()> {
     let mut content = String::new();
     file.read_to_string(&mut content)?;
 
-    println!("Main Content: {}",content);
-
+    println!("Main Content: {}", content);
 
     //TODO: make this an environment arg
     content = add_text_before_substring(&content, "fn fibonacci(n: u32) -> u32 {", dep_string);
 
-    println!("Main Content after add: {}",content);
+    println!("Main Content after add: {}", content);
 
     file.set_len(0)?;
     file.seek(io::SeekFrom::Start(0))?;
@@ -159,7 +158,7 @@ fn add_header_to_main(path: &str, dep_string: &str) -> io::Result<()> {
     Ok(())
 }
 
-// Tmp File directories 
+// Tmp File directories
 // TODO: create multiple of these for generating multiple proofs at once
 const TMP_GUEST_DIR: &str = "./.tmp_guest";
 
@@ -167,9 +166,9 @@ const TMP_MAIN: &str = "./.tmp_guest/src/main.rs";
 
 const TMP_CARGO_TOML: &str = "./.tmp_guest/Cargo.toml";
 
-
 // SP1 File additions
-const SP1_GUEST_DEPS_STRING: &str = "\nsp1-zkvm = { git = \"https://github.com/succinctlabs/sp1.git\" }\n";
+const SP1_GUEST_DEPS_STRING: &str =
+    "\nsp1-zkvm = { git = \"https://github.com/succinctlabs/sp1.git\" }\n";
 
 const SP1_ELF_PATH: &str = "./.tmp_guest/elf/riscv32im-succinct-zkvm-elf";
 
@@ -192,6 +191,9 @@ const JOLT_HOST_MAIN: &[u8] = b"use std::{io::Write, fs};\n\npub fn main() {\nle
 
 const JOLT_HOST_CARGO: &[u8] = b"[package]\nname = \"method\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[workspace]\nmembers = [\"guest\"]\n\n[profile.release]\ndebug = 1\ncodegen-units = 1\nlto = \"fat\"\n\n[dependencies]\njolt = { package = \"jolt-sdk\", git = \"https://github.com/a16z/jolt\", features = [\"host\"] }\nguest = { path = \"./guest\" }\n\n[patch.crates-io]\nark-ff = { git = \"https://github.com/a16z/arkworks-algebra\", branch = \"optimize/field-from-u64\" }\nark-ec = { git = \"https://github.com/a16z/arkworks-algebra\", branch = \"optimize/field-from-u64\" }\nark-serialize = { git = \"https://github.com/a16z/arkworks-algebra\", branch = \"optimize/field-from-u64\" }";
 
+const JOLT_HOST_TOOLCHAIN: &[u8] =
+    b"[toolchain]\nchannel = \"nightly-2024-04-20\"\ntargets = [\"riscv32i-unknown-none-elf\"]";
+
 // Risc 0 File Additions
 const RISC0_GUEST_DIR: &str = "./.tmp_guest/guest";
 
@@ -199,15 +201,15 @@ const RISC0_GUEST_MAIN: &str = "./.tmp_guest/guest/src/main.rs";
 
 const RISC0_GUEST_CARGO_TOML: &str = "./.tmp_guest/guest/Cargo.toml";
 
-const RISC0_GUEST_PROGRAM_HEADER: &str = "#![no_main]\n#![no_std]\nrisc0_zkvm::guest::entry!(main)\n";
+const RISC0_GUEST_PROGRAM_HEADER: &str =
+    "#![no_main]\n#![no_std]\nrisc0_zkvm::guest::entry!(main)\n";
 
-const RISC0_GUEST_DEPS_STRING: &str = "\nrisc0-zkvm = { path = \"https://github.com/risc0/risc0.git\", default-features = false }\n";
+const RISC0_GUEST_DEPS_STRING: &str =
+    "\nrisc0-zkvm = { path = \"https://github.com/risc0/risc0.git\", default-features = false }\n";
 
 // Methods
 
 const RISC0_METHOD_PATH: &str = "./.tmp_guest/}";
-
-const RISC0_CARGO_TOML: &str = "./.tmp_guest/Cargo.toml";
 
 const RISC0_LIB_FILE_PATH: &str = "./.tmp_guest/src/}";
 
@@ -229,18 +231,17 @@ fn main() {
             // We create a temporary directory to edit the main.rs
             copy_dir_all(&args.guest_path, TMP_GUEST_DIR).unwrap();
             /*
-                #![no_main]
-                sp1_zkvm::entrypoint!(main);
-             */
-            prepend_to_file(TMP_MAIN, 
-            SP1_PROGRAM_HEADER).unwrap();
+               #![no_main]
+               sp1_zkvm::entrypoint!(main);
+            */
+            prepend_to_file(TMP_MAIN, SP1_PROGRAM_HEADER).unwrap();
 
-            /* 
+            /*
             sp1-core = { git = "https://github.com/succinctlabs/sp1.git" }
              */
             add_dependency_to_toml(TMP_CARGO_TOML, SP1_GUEST_DEPS_STRING).unwrap();
 
-            /* 
+            /*
                 cd .tmp_guest
                 cargo prove build
             */
@@ -258,68 +259,64 @@ fn main() {
 
             // TODO: Write input to program.
             let stdin = SP1Stdin::new();
-            /*
-            let n = 10u32;
-            let mut stdin = SP1Stdin::new();
-            stdin.write(&n);
-            */
 
             //println!("Elf data: {:?}", elf_data);
             let client = ProverClient::new();
             let (pk, vk) = client.setup(&elf_data);
-            let proof = client.prove(&pk, stdin).expect("proving failed");
+            let proof = client.prove_compressed(&pk, stdin).expect("proving failed");
 
             println!("generated proof");
 
-            // TODO: Read output from program.
-            /*
-            let _ = proof.public_values.read::<u32>();
-            let a = proof.public_values.read::<u32>();
-            let b = proof.public_values.read::<u32>();
-            println!("a: {}", a);
-            println!("b: {}", b);
-            */
-
             // Verify proof.
-            client.verify(&proof, &vk).expect("verification failed");
+            client
+                .verify_compressed(&proof, &vk)
+                .expect("verification failed");
 
             // Save proof.
-            proof
-                .save("sp1_proof.json")
-                .expect("saving proof failed");
+            proof.save("sp1.proof").expect("saving proof failed");
 
             // Save elf
+            let mut elf_file = fs::File::create("sp1.elf").expect("Failed to create sp1 elf file");
+            elf_file
+                .write_all(&elf_data)
+                .expect("failed write sp1 elf to file");
 
-            println!("succesfully generated and verified proof for the program!") 
+            println!("succesfully generated and verified proof for the program!")
         }
         Commands::ProveJolt(args) => {
-            println!("'Proving with Risc0 program in: {}", args.guest_path);
+            println!("'Proving with Jolt program in: {}", args.guest_path);
             /*
-                Copy guest to guest directory structure
-             */
+               Copy guest to guest directory structure
+            */
             copy_dir_all(&args.guest_path, JOLT_TMP_GUEST_DIR).unwrap();
 
             /*
-                #![cfg_attr(feature = \"guest\", no_std)]
-                #![no_main]
-             */
-            prepend_to_file(JOLT_TMP_MAIN, 
-            JOLT_GUEST_PROGRAM_HEADER).unwrap();
+               #![cfg_attr(feature = \"guest\", no_std)]
+               #![no_main]
+            */
+            prepend_to_file(JOLT_TMP_MAIN, JOLT_GUEST_PROGRAM_HEADER).unwrap();
 
-            /* 
-                jolt = { package = "jolt-sdk", git = \"https://github.com/a16z/jolt\" }"
-             */
-            let mut guest_toml_file = fs::File::create(JOLT_TMP_CARGO_TOML).expect("could not open guest toml file");
-            guest_toml_file.write_all(&JOLT_GUEST_TOML).expect("failed to write guest toml");
+            /*
+               jolt = { package = "jolt-sdk", git = \"https://github.com/a16z/jolt\" }"
+            */
+            let mut guest_toml_file =
+                fs::File::create(JOLT_TMP_CARGO_TOML).expect("could not open guest toml file");
+            guest_toml_file
+                .write_all(&JOLT_GUEST_TOML)
+                .expect("failed to write guest toml");
 
-            /* 
-                #[jolt::provable];
-             */
+            /*
+               #[jolt::provable];
+            */
             add_header_to_main(JOLT_TMP_MAIN, JOLT_GUEST_FUNCTION_HEADER).unwrap();
             fs::rename(JOLT_TMP_MAIN, "./.tmp_guest/guest/src/lib.rs").unwrap();
-            // Jolt only proves library functions and requires no main.
+
+            // NOTE: Jolt only proves library functions and requires no main function within the library otherwise compilation to fail so we remove it using this hacky fix.
             let mut contents = String::new();
-            File::open("./.tmp_guest/guest/src/lib.rs").unwrap().read_to_string(&mut contents).unwrap();
+            File::open("./.tmp_guest/guest/src/lib.rs")
+                .unwrap()
+                .read_to_string(&mut contents)
+                .unwrap();
 
             // Define a regular expression to match the main function
             // TODO: we need a more resilient way of doing this.
@@ -334,29 +331,39 @@ fn main() {
             //remove_text_from_file("./.tmp_guest/guest/src/lib.rs", &main_string).expect("failed to remvoe text");
 
             // to support std library compatibility we remove the blackbox
-            remove_text_from_file("./.tmp_guest/guest/src/lib.rs", "use std::hint::black_box;").expect("failed to remove text");
+            remove_text_from_file("./.tmp_guest/guest/src/lib.rs", "use std::hint::black_box;")
+                .expect("failed to remove text");
+
             /*
-                create main.rs file
+                create Host main.rs file
 
             */
             let src_dir = format!("{}/src", "./.tmp_guest/");
-            fs::create_dir(&src_dir).expect("Failed to create src directory");
-            let mut main_file = fs::File::create("./.tmp_guest/src/main.rs").expect("Failed to create lib.rs file");
-            main_file.write_all(&JOLT_HOST_MAIN).expect("Failed to write to main.rs file");
-        
-            /*
-                create cargo.toml
-            */
-            let mut toml_file = fs::File::create("./.tmp_guest/Cargo.toml").expect("Failed to create Cargo.toml file");
-            toml_file.write_all(&JOLT_HOST_CARGO).expect("Failed to write to Cargo.toml file");
+            fs::create_dir_all(&src_dir).expect("Failed to create src directory");
+            let mut main_file =
+                fs::File::create("./.tmp_guest/src/main.rs").expect("Failed to create lib.rs file");
+            main_file
+                .write_all(&JOLT_HOST_MAIN)
+                .expect("Failed to write to main.rs file");
 
             /*
-                create rust.toolchain
+                create Host Cargo.toml
             */
-            let mut toolchain_file = fs::File::create("./.tmp_guest/rust-toolchain.toml").expect("Failed to create Cargo.toml file");
-            toolchain_file.write_all(b"[toolchain]\nchannel = \"nightly-2024-04-20\"\ntargets = [\"riscv32i-unknown-none-elf\"]").expect("Failed to write to Cargo.toml file");
+            let mut toml_file = fs::File::create("./.tmp_guest/Cargo.toml")
+                .expect("Failed to create Host Cargo.toml file");
+            toml_file
+                .write_all(&JOLT_HOST_CARGO)
+                .expect("Failed to write to Host Cargo.toml file");
 
-            
+            /*
+                create Host rust.toolchain
+            */
+            let mut toolchain_file = fs::File::create("./.tmp_guest/rust-toolchain.toml")
+                .expect("Failed to create rust-toolchain.toml file");
+            toolchain_file
+                .write_all(JOLT_HOST_TOOLCHAIN)
+                .expect("Failed to write to host rust-toolchain.toml file");
+
             let guest_path = fs::canonicalize(TMP_GUEST_DIR).unwrap();
             Command::new("cargo")
                 .arg("run")
@@ -369,62 +376,57 @@ fn main() {
         Commands::ProveRisc0(args) => {
             println!("'Proving with Risc0 program in: {}", args.guest_path);
             /*
-                Copy guest to guest directory structure
-             */
+               Copy guest to guest directory structure
+            */
             copy_dir_all(&args.guest_path, RISC0_GUEST_DIR).unwrap();
             /*
-                #![no_main]
-                #![no_std]
-                risc0_zkvm::guest::entry!(main);
-             */
-            prepend_to_file(RISC0_GUEST_MAIN, 
-            RISC0_GUEST_PROGRAM_HEADER).unwrap();
+               #![no_main]
+               #![no_std]
+               risc0_zkvm::guest::entry!(main);
+            */
+            prepend_to_file(RISC0_GUEST_MAIN, RISC0_GUEST_PROGRAM_HEADER).unwrap();
 
-            /* 
-                risc0-zkvm = { path = \"https://github.com/risc0/risc0.git\", default-features = false }
-             */
+            /*
+               risc0-zkvm = { path = \"https://github.com/risc0/risc0.git\", default-features = false }
+            */
             add_dependency_to_toml(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS_STRING).unwrap();
 
             /*
-                create build.rs file
-             */
-            let mut build_file = fs::File::create(&RISC0_METHOD_PATH).expect("Failed to create build.rs file");
-            build_file.write_all(&RISC0_BUILD_FILE).expect("Failed to write to build.rs file");
+               create build.rs file
+            */
+            let mut build_file =
+                fs::File::create(&RISC0_METHOD_PATH).expect("Failed to create build.rs file");
+            build_file
+                .write_all(&RISC0_BUILD_FILE)
+                .expect("Failed to write to build.rs file");
 
             /*
                 create lib.rs file
             */
             let src_dir = format!("{}/src", RISC0_METHOD_PATH);
             fs::create_dir(&src_dir).expect("Failed to create src directory");
-            let mut lib_file = fs::File::create(&RISC0_LIB_FILE_PATH).expect("Failed to create lib.rs file");
-            lib_file.write_all(&RISC0_LIB_FILE).expect("Failed to write to lib.rs file");
-        
+            let mut lib_file =
+                fs::File::create(&RISC0_LIB_FILE_PATH).expect("Failed to create lib.rs file");
+            lib_file
+                .write_all(&RISC0_LIB_FILE)
+                .expect("Failed to write to lib.rs file");
+
             /*
                 create cargo.toml
             */
-            let mut toml_file = fs::File::create(&RISC0_METHOD_PATH).expect("Failed to create Cargo.toml file");
-            toml_file.write_all(&RISC0_CARGO_FILE).expect("Failed to write to Cargo.toml file");
-
-            // TODO: Add Input IO
-            /*
-                // Send a & b to the guest
-                let env = ExecutorEnv::builder()
-                .write(&a)
-                .unwrap()
-                .write(&b)
-                .unwrap()
-                .build()
-                .unwrap();
-            */
+            let mut toml_file =
+                fs::File::create(&RISC0_METHOD_PATH).expect("Failed to create Cargo.toml file");
+            toml_file
+                .write_all(&RISC0_CARGO_FILE)
+                .expect("Failed to write to Cargo.toml file");
 
             // Obtain the default prover.
+            /*
             let prover = default_prover();
 
             let env = ExecutorEnv::builder().build().unwrap();
 
-
             // Produce a receipt by proving the specified ELF binary.
-            /*
             let elf_data = fs::read(&RISC_0_ELF_PATH).expect("unable to read metadata");
             let receipt = prover.prove(env, elf_data).unwrap().receipt;
             let receipt_bytes = bincode::serialize(&receipt);
@@ -436,17 +438,7 @@ fn main() {
             receipt.verify(IMAGE_ID).expect("Proof did not verify with associated image_id");
             */
 
-
             println!("generated proof");
-            // TODO: Add Output IO
-            /*
-            // Extract journal of receipt (i.e. output c, where c = a * b)
-            let c: u64 = receipt.journal.decode().expect(
-                "Journal output should deserialize into the same types (& order) that it was written",
-            );
-            */
-            // Report the product
-            //println!("I know the factors of {}, and I can prove it!", c);
         }
     }
 }
