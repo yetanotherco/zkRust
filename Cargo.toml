@@ -7,5 +7,18 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
-sp1-prover = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.0.8-testnet" }
+regex = "1.10.5"
+
+# Sp1
 sp1-sdk = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.0.8-testnet" }
+
+# Risc 0
+risc0-zkvm = { git = "https://github.com/risc0/risc0.git" }
+
+# Jolt
+jolt = { package = "jolt-sdk", git = "https://github.com/a16z/jolt", features = ["host"] }
+
+[patch.crates-io]
+ark-ff = { git = "https://github.com/a16z/arkworks-algebra", branch = "optimize/field-from-u64" }
+ark-ec = { git = "https://github.com/a16z/arkworks-algebra", branch = "optimize/field-from-u64" }
+ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "optimize/field-from-u64" }
