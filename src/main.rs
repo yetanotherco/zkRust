@@ -1,11 +1,17 @@
+use aligned_sdk::types::{ProvingSystemId, VerificationData};
 use clap::{Args, Parser, Subcommand};
+use ethers::prelude::{LocalWallet, Signer};
 #[warn(unused_imports)]
 use sp1_sdk::{ProverClient, SP1Stdin};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, io};
+use std::sync::Arc;
+use ethers::middleware::SignerMiddleware;
+use ethers::providers::{Http, Provider};
+use zkRust::pay_batcher;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -27,6 +33,8 @@ enum Commands {
 struct ProofArgs {
     guest_path: String,
     output_proof_path: String,
+    #[clap(long)]
+    submit_to_aligned_with_keystore: Option<PathBuf>,
     #[clap(long)]
     std: bool,
 }
@@ -236,6 +244,52 @@ fn main() {
                 .write_all(&elf_data)
                 .expect("failed write sp1 elf to file");
             println!("generated proof");
+
+            // Submit to aligned
+            if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                let keystore_password = rpassword::prompt_password("Enter keystore password: ")
+                    .expect("Failed to read keystore password");
+
+                let wallet = LocalWallet::decrypt_keystore(keystore_path, &keystore_password)
+                    .expect("Failed to decrypt keystore")
+                    .with_chain_id(17000u64);
+
+                let proof = bincode::serialize(&proof).expect("failed to serialize proof");
+
+                let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
+
+                let provider = Provider::<Http>::try_from(rpc_url)
+                    .expect("Failed to connect to provider");
+
+                let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
+
+                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+
+                runtime
+                    .block_on(pay_batcher(wallet.address(), signer.clone()))
+                    .expect("Failed to pay for proof submission");
+
+                let verification_data = VerificationData {
+                    proving_system: ProvingSystemId::SP1,
+                    proof,
+                    proof_generator_addr: wallet.address(),
+                    vm_program_code: Some(elf_data),
+                    verification_key: None,
+                    pub_input: None,
+                };
+
+                println!("Submitting proof to aligned for verification");
+
+                runtime
+                    .block_on(zkRust::submit_proof_and_wait_for_verification(
+                        verification_data,
+                        wallet,
+                        rpc_url.to_string(),
+                    ))
+                    .expect("failed to submit proof");
+
+                println!("Proof submitted and verified on aligned");
+            }
         }
         Commands::ProveJolt(_) => {
             todo!("Support Jolt once the Verifier is merged on Aligned");
