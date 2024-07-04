@@ -12,9 +12,7 @@ fn main() {
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .init();
 
-    let env = ExecutorEnv::builder()
-        .build()
-        .unwrap();
+    let env = ExecutorEnv::builder().build().unwrap();
 
     // Obtain the default prover.
     let prover = default_prover();

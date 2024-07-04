@@ -335,13 +335,13 @@ fn main() {
             /*
                Copy guest to risc0 guest directory structure
             */
-            copy_dir_all(&args.guest_path, SP1_DIR).unwrap();
             fs::create_dir_all(RISC0_GUEST_SRC_DIR).unwrap();
 
             // Copy the source file to the destination directory
             //TODO: ass prompt specifying assumed path dependency to cli
             let guest_path = format!("{}/src/main.rs", args.guest_path);
             fs::copy(&guest_path, &RISC0_GUEST_MAIN).unwrap();
+            todo!();
             /*
                #![no_main]
                #![no_std]
@@ -381,6 +381,7 @@ fn main() {
                 .current_dir(guest_path)
                 .output()
                 .expect("Prove build failed");
+
             println!("Proof and IMAGE_ID generated!");
         }
     }
