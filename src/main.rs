@@ -1,9 +1,7 @@
 use clap::{Args, Parser, Subcommand};
-use regex::Regex;
 #[warn(unused_imports)]
-use risc0_zkvm::{default_prover, ExecutorEnv};
 use sp1_sdk::{ProverClient, SP1Stdin};
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::{Read, Seek, Write};
 use std::path::Path;
 use std::process::Command;
@@ -30,7 +28,7 @@ struct ProofArgs {
     guest_path: String,
     output_proof_path: String,
     #[clap(long)]
-    std: bool
+    std: bool,
 }
 
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
@@ -47,20 +45,6 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
     Ok(())
 }
 
-// Note: assumes empty line before
-fn add_text_before_substring(original_string: &str, substring: &str, text_to_add: &str) -> String {
-    if let Some(index) = original_string.find(substring) {
-        let mut modified_string = String::with_capacity(original_string.len() + text_to_add.len());
-        modified_string.push_str(&original_string[..index]);
-        modified_string.push_str(text_to_add);
-        modified_string.push_str(&original_string[index..index + substring.len()]);
-        modified_string.push_str(&original_string[index + substring.len()..]);
-        modified_string
-    } else {
-        original_string.to_string()
-    }
-}
-
 fn add_text_after_substring(original_string: &str, substring: &str, text_to_add: &str) -> String {
     if let Some(index) = original_string.find(substring) {
         let mut modified_string = String::with_capacity(original_string.len() + text_to_add.len());
@@ -71,27 +55,6 @@ fn add_text_after_substring(original_string: &str, substring: &str, text_to_add:
     } else {
         original_string.to_string()
     }
-}
-
-fn remove_text_from_file(file_path: &str, text_to_remove: &str) -> io::Result<()> {
-    // Open the file in read mode to read its existing content
-    let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
-
-    // Read the existing content of the file
-    let mut content = String::new();
-    file.read_to_string(&mut content)?;
-
-    // Remove the text
-    content = content.replace(text_to_remove, "");
-
-    // Write the modified contents back to the file
-    let mut file = File::create(file_path)?;
-    file.write_all(content.as_bytes())?;
-    file.flush()?;
-
-    println!("Text has been removed successfully.");
-
-    Ok(())
 }
 
 fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
@@ -136,7 +99,11 @@ fn add_dependency_to_toml(path: &str, dep_string: &str) -> io::Result<()> {
     Ok(())
 }
 
-fn replace_dependency_to_toml(path: &str, original_string: &str, replace_string: &str) -> io::Result<()> {
+fn replace_dependency_to_toml(
+    path: &str,
+    original_string: &str,
+    replace_string: &str,
+) -> io::Result<()> {
     // Open the file in read write mode to read its existing content
     let mut file = OpenOptions::new().read(true).write(true).open(path)?;
 
@@ -144,35 +111,11 @@ fn replace_dependency_to_toml(path: &str, original_string: &str, replace_string:
     let mut content = String::new();
     file.read_to_string(&mut content)?;
 
-    println!("Toml Content: {}", content);
+    //println!("Toml Content: {}", content);
 
     content = content.replace(original_string, replace_string);
 
-    println!("Toml Content after add: {}", content);
-
-    file.set_len(0)?;
-    file.seek(io::SeekFrom::Start(0))?;
-    file.write_all(content.as_bytes())?;
-    file.set_len(content.len() as u64)?;
-    file.flush()?;
-
-    Ok(())
-}
-
-fn add_header_to_main(path: &str, dep_string: &str) -> io::Result<()> {
-    // Open the file in read write mode to read its existing content
-    let mut file = OpenOptions::new().read(true).write(true).open(path)?;
-
-    // Read the existing content of the file
-    let mut content = String::new();
-    file.read_to_string(&mut content)?;
-
-    println!("Main Content: {}", content);
-
-    //TODO: make this an environment arg
-    content = add_text_before_substring(&content, "fn fibonacci(n: u32) -> u32 {", dep_string);
-
-    println!("Main Content after add: {}", content);
+    //println!("Toml Content after add: {}", content);
 
     file.set_len(0)?;
     file.seek(io::SeekFrom::Start(0))?;
@@ -200,6 +143,7 @@ const SP1_ELF_PATH: &str = "./.tmp_guest/elf/riscv32im-succinct-zkvm-elf";
 const SP1_PROGRAM_HEADER: &str = "#![no_main]\nsp1_zkvm::entrypoint!(main);\n";
 
 // Jolt File Additions
+/*
 const JOLT_TMP_GUEST_DIR: &str = "./.tmp_guest/guest";
 
 const JOLT_TMP_MAIN: &str = "./.tmp_guest/guest/src/main.rs";
@@ -218,6 +162,7 @@ const JOLT_HOST_CARGO: &[u8] = b"[package]\nname = \"method\"\nversion = \"0.1.0
 
 const JOLT_HOST_TOOLCHAIN: &[u8] =
     b"[toolchain]\nchannel = \"nightly-2024-04-20\"\ntargets = [\"riscv32i-unknown-none-elf\"]";
+*/
 
 // Risc 0 File Additions
 const RISC0_DIR: &str = "./.risc_zero/";
@@ -231,26 +176,22 @@ const RISC0_GUEST_CARGO_TOML: &str = "./.risc_zero/methods/guest/Cargo.toml";
 const RISC0_GUEST_PROGRAM_HEADER_NO_STD: &str =
     "#![no_main]\n#![no_std]\nrisc0_zkvm::guest::entry!(main);\n";
 
-const RISC0_GUEST_PROGRAM_HEADER_STD: &str =
-    "#![no_main]\n\nrisc0_zkvm::guest::entry!(main);\n";
+const RISC0_GUEST_PROGRAM_HEADER_STD: &str = "#![no_main]\n\nrisc0_zkvm::guest::entry!(main);\n";
 
-const RISC0_GUEST_DEPS_NO_STD: &str =
-    "default-features = false";
-const RISC0_GUEST_DEPS_STD: &str =
-    "features = [\"std\"]";
+const RISC0_GUEST_DEPS_NO_STD: &str = "default-features = false";
+const RISC0_GUEST_DEPS_STD: &str = "features = [\"std\"]";
 
 fn main() {
     let cli = Cli::parse();
 
-    // You can check for the existence of subcommands, and if found use their
-    // matches just as you would the top level cmd
     match &cli.command {
         Commands::ProveSp1(args) => {
             println!("'Proving with sp1 program in: {}", args.guest_path);
             // We create a temporary directory to edit the main.rs
             copy_dir_all(&args.guest_path, TMP_GUEST_DIR).unwrap();
+            let guest_path = format!("{}/src/main.rs", args.guest_path);
+            fs::copy(&guest_path, &RISC0_GUEST_MAIN).unwrap();
 
-            // Copy main file to risc0
             // Add needed file header
             /*
                #![no_main]
@@ -262,8 +203,6 @@ fn main() {
             sp1-core = { git = "https://github.com/succinctlabs/sp1.git" }
              */
             add_dependency_to_toml(TMP_CARGO_TOML, SP1_GUEST_DEPS_STRING).unwrap();
-
-            //TODO: Update and add no_std/std flag
 
             /*
                 cd .tmp_guest
@@ -277,8 +216,6 @@ fn main() {
                 .output()
                 .expect("Prove build failed");
 
-            println!("Elf: {:?}", SP1_ELF_PATH);
-
             let elf_data = fs::read(&SP1_ELF_PATH).expect("unable to read metadata");
 
             // TODO: Write input to program.
@@ -287,8 +224,6 @@ fn main() {
             let client = ProverClient::new();
             let (pk, vk) = client.setup(&elf_data);
             let proof = client.prove_compressed(&pk, stdin).expect("proving failed");
-
-            println!("generated proof");
 
             // Verify proof.
             client
@@ -303,101 +238,100 @@ fn main() {
             elf_file
                 .write_all(&elf_data)
                 .expect("failed write sp1 elf to file");
-
-            println!("succesfully generated and verified proof for the program!")
+            println!("generated proof");
         }
         Commands::ProveJolt(_) => {
             todo!("Support Jolt once the Verifier is merged on Aligned");
-        /*
-            println!("'Proving with Jolt program in: {}", args.guest_path);
             /*
-               Copy guest to guest directory structure
+                println!("'Proving with Jolt program in: {}", args.guest_path);
+                /*
+                   Copy guest to guest directory structure
+                */
+                copy_dir_all(&args.guest_path, JOLT_TMP_GUEST_DIR).unwrap();
+
+                /*
+                   #![cfg_attr(feature = \"guest\", no_std)]
+                   #![no_main]
+                */
+                prepend_to_file(JOLT_TMP_MAIN, JOLT_GUEST_PROGRAM_HEADER).unwrap();
+
+                /*
+                   jolt = { package = "jolt-sdk", git = \"https://github.com/a16z/jolt\" }"
+                */
+                let mut guest_toml_file =
+                    fs::File::create(JOLT_TMP_CARGO_TOML).expect("could not open guest toml file");
+                guest_toml_file
+                    .write_all(&JOLT_GUEST_TOML)
+                    .expect("failed to write guest toml");
+
+                /*
+                   #[jolt::provable];
+                */
+                add_header_to_main(JOLT_TMP_MAIN, JOLT_GUEST_FUNCTION_HEADER).unwrap();
+                fs::rename(JOLT_TMP_MAIN, "./.tmp_guest/guest/src/lib.rs").unwrap();
+
+                // NOTE: Jolt only proves library functions and requires no main function within the library otherwise compilation to fail so we remove it using this hacky fix.
+                let mut contents = String::new();
+                File::open("./.tmp_guest/guest/src/lib.rs")
+                    .unwrap()
+                    .read_to_string(&mut contents)
+                    .unwrap();
+
+                // Define a regular expression to match the main function
+                // TODO: we need a more resilient way of doing this.
+                let main_function_regex = Regex::new(r"(?s)pub fn main\(\) \{.*?\}").unwrap();
+
+                // Remove the main function
+                let modified_contents = main_function_regex.replace(&contents, "").to_string();
+
+                // Write the modified contents back to the file
+                let mut file = File::create("./.tmp_guest/guest/src/lib.rs").unwrap();
+                file.write_all(modified_contents.as_bytes()).unwrap();
+                //remove_text_from_file("./.tmp_guest/guest/src/lib.rs", &main_string).expect("failed to remvoe text");
+
+                // to support std library compatibility we remove the blackbox
+                remove_text_from_file("./.tmp_guest/guest/src/lib.rs", "use std::hint::black_box;")
+                    .expect("failed to remove text");
+
+                /*
+                    create Host main.rs file
+
+                */
+                let src_dir = format!("{}/src", "./.tmp_guest/");
+                fs::create_dir_all(&src_dir).expect("Failed to create src directory");
+                let mut main_file =
+                    fs::File::create("./.tmp_guest/src/main.rs").expect("Failed to create lib.rs file");
+                main_file
+                    .write_all(&JOLT_HOST_MAIN)
+                    .expect("Failed to write to main.rs file");
+
+                /*
+                    create Host Cargo.toml
+                */
+                let mut toml_file = fs::File::create("./.tmp_guest/Cargo.toml")
+                    .expect("Failed to create Host Cargo.toml file");
+                toml_file
+                    .write_all(&JOLT_HOST_CARGO)
+                    .expect("Failed to write to Host Cargo.toml file");
+
+                /*
+                    create Host rust.toolchain
+                */
+                let mut toolchain_file = fs::File::create("./.tmp_guest/rust-toolchain.toml")
+                    .expect("Failed to create rust-toolchain.toml file");
+                toolchain_file
+                    .write_all(JOLT_HOST_TOOLCHAIN)
+                    .expect("Failed to write to host rust-toolchain.toml file");
+
+                let guest_path = fs::canonicalize(TMP_GUEST_DIR).unwrap();
+                Command::new("cargo")
+                    .arg("run")
+                    .arg("--release")
+                    .current_dir(guest_path)
+                    .output()
+                    .expect("Prove build failed");
+                println!("Elf and Proof generated!");
             */
-            copy_dir_all(&args.guest_path, JOLT_TMP_GUEST_DIR).unwrap();
-
-            /*
-               #![cfg_attr(feature = \"guest\", no_std)]
-               #![no_main]
-            */
-            prepend_to_file(JOLT_TMP_MAIN, JOLT_GUEST_PROGRAM_HEADER).unwrap();
-
-            /*
-               jolt = { package = "jolt-sdk", git = \"https://github.com/a16z/jolt\" }"
-            */
-            let mut guest_toml_file =
-                fs::File::create(JOLT_TMP_CARGO_TOML).expect("could not open guest toml file");
-            guest_toml_file
-                .write_all(&JOLT_GUEST_TOML)
-                .expect("failed to write guest toml");
-
-            /*
-               #[jolt::provable];
-            */
-            add_header_to_main(JOLT_TMP_MAIN, JOLT_GUEST_FUNCTION_HEADER).unwrap();
-            fs::rename(JOLT_TMP_MAIN, "./.tmp_guest/guest/src/lib.rs").unwrap();
-
-            // NOTE: Jolt only proves library functions and requires no main function within the library otherwise compilation to fail so we remove it using this hacky fix.
-            let mut contents = String::new();
-            File::open("./.tmp_guest/guest/src/lib.rs")
-                .unwrap()
-                .read_to_string(&mut contents)
-                .unwrap();
-
-            // Define a regular expression to match the main function
-            // TODO: we need a more resilient way of doing this.
-            let main_function_regex = Regex::new(r"(?s)pub fn main\(\) \{.*?\}").unwrap();
-
-            // Remove the main function
-            let modified_contents = main_function_regex.replace(&contents, "").to_string();
-
-            // Write the modified contents back to the file
-            let mut file = File::create("./.tmp_guest/guest/src/lib.rs").unwrap();
-            file.write_all(modified_contents.as_bytes()).unwrap();
-            //remove_text_from_file("./.tmp_guest/guest/src/lib.rs", &main_string).expect("failed to remvoe text");
-
-            // to support std library compatibility we remove the blackbox
-            remove_text_from_file("./.tmp_guest/guest/src/lib.rs", "use std::hint::black_box;")
-                .expect("failed to remove text");
-
-            /*
-                create Host main.rs file
-
-            */
-            let src_dir = format!("{}/src", "./.tmp_guest/");
-            fs::create_dir_all(&src_dir).expect("Failed to create src directory");
-            let mut main_file =
-                fs::File::create("./.tmp_guest/src/main.rs").expect("Failed to create lib.rs file");
-            main_file
-                .write_all(&JOLT_HOST_MAIN)
-                .expect("Failed to write to main.rs file");
-
-            /*
-                create Host Cargo.toml
-            */
-            let mut toml_file = fs::File::create("./.tmp_guest/Cargo.toml")
-                .expect("Failed to create Host Cargo.toml file");
-            toml_file
-                .write_all(&JOLT_HOST_CARGO)
-                .expect("Failed to write to Host Cargo.toml file");
-
-            /*
-                create Host rust.toolchain
-            */
-            let mut toolchain_file = fs::File::create("./.tmp_guest/rust-toolchain.toml")
-                .expect("Failed to create rust-toolchain.toml file");
-            toolchain_file
-                .write_all(JOLT_HOST_TOOLCHAIN)
-                .expect("Failed to write to host rust-toolchain.toml file");
-
-            let guest_path = fs::canonicalize(TMP_GUEST_DIR).unwrap();
-            Command::new("cargo")
-                .arg("run")
-                .arg("--release")
-                .current_dir(guest_path)
-                .output()
-                .expect("Prove build failed");
-            println!("Elf and Proof generated!");
-        */
         }
         Commands::ProveRisc0(args) => {
             println!("'Proving with Risc0 program in: {}", args.guest_path);
@@ -407,24 +341,34 @@ fn main() {
             fs::create_dir_all(RISC0_GUEST_DIR).unwrap();
 
             // Copy the source file to the destination directory
+            //TODO: ass prompt specifying assumed path dependency to cli
             let guest_path = format!("{}/src/main.rs", args.guest_path);
-            println!("{:?}", guest_path);
             fs::copy(&guest_path, &RISC0_GUEST_MAIN).unwrap();
             /*
                #![no_main]
                #![no_std]
                risc0_zkvm::guest::entry!(main);
+               or
+
+               #![no_main]
+               risc0_zkvm::guest::entry!(main);
             */
             if args.std {
-                println!("STD TRIGGERED");
                 prepend_to_file(RISC0_GUEST_MAIN, RISC0_GUEST_PROGRAM_HEADER_STD).unwrap();
-                replace_dependency_to_toml(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS_NO_STD, RISC0_GUEST_DEPS_STD).expect("failed to replace no_std dependency");
-                println!("FILE REPLACED");
+                replace_dependency_to_toml(
+                    RISC0_GUEST_CARGO_TOML,
+                    RISC0_GUEST_DEPS_NO_STD,
+                    RISC0_GUEST_DEPS_STD,
+                )
+                .expect("failed to replace no_std dependency");
             } else {
-                println!("NO_STD TRIGGERED");
                 prepend_to_file(RISC0_GUEST_MAIN, RISC0_GUEST_PROGRAM_HEADER_NO_STD).unwrap();
-                replace_dependency_to_toml(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS_STD, RISC0_GUEST_DEPS_NO_STD).expect("failed to replace no_std dependency");
-                println!("FILE REPLACED");
+                replace_dependency_to_toml(
+                    RISC0_GUEST_CARGO_TOML,
+                    RISC0_GUEST_DEPS_STD,
+                    RISC0_GUEST_DEPS_NO_STD,
+                )
+                .expect("failed to replace no_std dependency");
             }
 
             let guest_path = fs::canonicalize(RISC0_DIR).unwrap();
