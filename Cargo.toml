@@ -22,7 +22,7 @@ risc0-zkvm = { git = "https://github.com/risc0/risc0.git" }
 jolt = { package = "jolt-sdk", git = "https://github.com/a16z/jolt", features = ["host"] }
 
 # Aligned SDK
-aligned-sdk = { git = "https://github.com/yetanotherco/aligned_layer" }
+aligned-sdk = { git = "https://github.com/yetanotherco/aligned_layer", tag = "v0.2.1" }
 ethers = { tag = "v2.0.15-fix-reconnections", features = ["ws", "rustls"], git = "https://github.com/yetanotherco/ethers-rs.git" }
 
 dialoguer = "0.11.0"
