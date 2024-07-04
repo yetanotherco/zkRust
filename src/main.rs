@@ -1,14 +1,17 @@
 use aligned_sdk::types::{ProvingSystemId, VerificationData};
 use clap::{Args, Parser, Subcommand};
-use ethers::prelude::LocalWallet;
+use ethers::prelude::{LocalWallet, Signer};
 #[warn(unused_imports)]
 use sp1_sdk::{ProverClient, SP1Stdin};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::str::FromStr;
 use std::{fs, io};
+use std::sync::Arc;
+use ethers::middleware::SignerMiddleware;
+use ethers::providers::{Http, Provider};
+use zkRust::pay_batcher;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -30,8 +33,8 @@ enum Commands {
 struct ProofArgs {
     guest_path: String,
     output_proof_path: String,
-    #[clap(long, default_value = "false")]
-    submit_to_aligned: bool,
+    #[clap(long)]
+    submit_to_aligned_with_keystore: Option<PathBuf>,
     #[clap(long)]
     std: bool,
 }
@@ -243,36 +246,39 @@ fn main() {
             println!("generated proof");
 
             // Submit to aligned
-            if args.submit_to_aligned {
+            if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                let keystore_password = rpassword::prompt_password("Enter keystore password: ")
+                    .expect("Failed to read keystore password");
+
+                let wallet = LocalWallet::decrypt_keystore(keystore_path, &keystore_password)
+                    .expect("Failed to decrypt keystore")
+                    .with_chain_id(17000u64);
+
                 let proof = bincode::serialize(&proof).expect("failed to serialize proof");
 
                 let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
 
-                // let provider = Provider::<Http>::try_from(rpc_url.clone())
-                //     .expect("Failed to connect to provider");
+                let provider = Provider::<Http>::try_from(rpc_url)
+                    .expect("Failed to connect to provider");
 
-                let wallet = LocalWallet::from_str(
-                    "2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6",
-                )
-                .expect("Failed to create wallet");
+                let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
 
-                // let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
+                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+
+                runtime
+                    .block_on(pay_batcher(wallet.address(), signer.clone()))
+                    .expect("Failed to pay for proof submission");
 
                 let verification_data = VerificationData {
                     proving_system: ProvingSystemId::SP1,
                     proof,
-                    proof_generator_addr: "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
-                        .parse()
-                        .unwrap(),
+                    proof_generator_addr: wallet.address(),
                     vm_program_code: Some(elf_data),
                     verification_key: None,
                     pub_input: None,
                 };
 
-
                 println!("Submitting proof to aligned for verification");
-
-                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
 
                 runtime
                     .block_on(zkRust::submit_proof_and_wait_for_verification(
