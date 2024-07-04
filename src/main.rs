@@ -76,6 +76,50 @@ fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
     Ok(())
 }
 
+fn append_to_file(file_path: &str, text_to_append: &str) -> io::Result<()> {
+    // Open the file in read mode to read its existing content
+    let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
+
+    // Read the existing content of the file
+    let mut content = String::new();
+    file.read_to_string(&mut content)?;
+
+    // Write the modified content back to the file
+    file.write_all(text_to_append.as_bytes())?;
+    file.flush()?;
+
+    Ok(())
+}
+
+fn adjust_toml(guest_toml_path: &str) -> io::Result<()> {
+    add_dependency_to_toml(guest_toml_path, &RISC0_GUEST_DEPS_STRING)?;
+    append_to_file(guest_toml_path, "[workspace]")?;
+
+    let mut toml = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(guest_toml_path)?;
+
+    let mut toml_content = String::new();
+    toml.read_to_string(&mut toml_content)?;
+
+    let name_line = toml_content
+        .lines()
+        .filter(|line| line.contains("name ="))
+        .next()
+        .unwrap();
+
+    let toml_content = toml_content.replace(name_line, "name = \"method\"");
+
+    toml.set_len(0)?;
+    toml.seek(io::SeekFrom::Start(0))?;
+    toml.write_all(toml_content.as_bytes())?;
+    toml.set_len(toml_content.len() as u64)?;
+    toml.flush()?;
+
+    Ok(())
+}
+
 fn add_dependency_to_toml(path: &str, dep_string: &str) -> io::Result<()> {
     // Open the file in read write mode to read its existing content
     let mut file = OpenOptions::new().read(true).write(true).open(path)?;
@@ -180,6 +224,9 @@ const RISC0_GUEST_PROGRAM_HEADER_STD: &str = "#![no_main]\n\nrisc0_zkvm::guest::
 
 const RISC0_GUEST_DEPS_NO_STD: &str = "default-features = false";
 const RISC0_GUEST_DEPS_STD: &str = "features = [\"std\"]";
+
+const RISC0_GUEST_DEPS_STRING: &str =
+    "\nrisc0-zkvm = { version = \"1.0.1\", default-features = false}\n";
 
 fn main() {
     let cli = Cli::parse();
@@ -341,7 +388,6 @@ fn main() {
             //TODO: ass prompt specifying assumed path dependency to cli
             let guest_path = format!("{}/src/main.rs", args.guest_path);
             fs::copy(&guest_path, &RISC0_GUEST_MAIN).unwrap();
-            todo!();
             /*
                #![no_main]
                #![no_std]
@@ -355,6 +401,7 @@ fn main() {
             // Copy the source Cargo.toml to the risc0 guest folder
             let guest_cargo_toml_path = format!("{}/Cargo.toml", args.guest_path);
             fs::copy(&guest_cargo_toml_path, &RISC0_GUEST_CARGO_TOML).unwrap();
+            adjust_toml(&RISC0_GUEST_CARGO_TOML).unwrap();
 
             if args.std {
                 prepend_to_file(RISC0_GUEST_MAIN, RISC0_GUEST_PROGRAM_HEADER_STD).unwrap();
@@ -374,11 +421,11 @@ fn main() {
                 .expect("failed to replace no_std dependency");
             }
 
-            let guest_path = fs::canonicalize(RISC0_DIR).unwrap();
+            let risc0_path = fs::canonicalize(RISC0_DIR).unwrap();
             Command::new("cargo")
                 .arg("run")
                 .arg("--release")
-                .current_dir(guest_path)
+                .current_dir(risc0_path)
                 .output()
                 .expect("Prove build failed");
 
