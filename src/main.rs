@@ -189,9 +189,6 @@ fn main() {
             println!("'Proving with sp1 program in: {}", args.guest_path);
             // We create a temporary directory to edit the main.rs
             copy_dir_all(&args.guest_path, TMP_GUEST_DIR).unwrap();
-            let guest_path = format!("{}/src/main.rs", args.guest_path);
-            fs::copy(&guest_path, &RISC0_GUEST_MAIN).unwrap();
-
             // Add needed file header
             /*
                #![no_main]
