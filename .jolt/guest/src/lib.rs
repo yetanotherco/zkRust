@@ -1,9 +1,6 @@
-/* 
 #![no_main]
-sp1_zkvm::entrypoint!(main);
-*/
-use std::hint::black_box;
 
+#[jolt::provable]
 fn fibonacci(n: u32) -> u32 {
     let mut nums = vec![1, 1];
     for _ in 0..n {
@@ -14,7 +11,3 @@ fn fibonacci(n: u32) -> u32 {
     nums[nums.len() - 1]
 }
 
-pub fn main() {
-    let result = black_box(fibonacci(black_box(16000)));
-    println!("result: {}", result);
-}

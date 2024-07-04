@@ -2,3 +2,5 @@ target/*
 target
 .tmp_guest
 .tmp_guest/*
+.DS_Store
+**/.DS_Store
