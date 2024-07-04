@@ -1,10 +1,13 @@
+use aligned_sdk::types::{ProvingSystemId, VerificationData};
 use clap::{Args, Parser, Subcommand};
+use ethers::prelude::LocalWallet;
 #[warn(unused_imports)]
 use sp1_sdk::{ProverClient, SP1Stdin};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, Write};
 use std::path::Path;
 use std::process::Command;
+use std::str::FromStr;
 use std::{fs, io};
 
 #[derive(Parser)]
@@ -27,6 +30,8 @@ enum Commands {
 struct ProofArgs {
     guest_path: String,
     output_proof_path: String,
+    #[clap(long, default_value = "false")]
+    submit_to_aligned: bool,
     #[clap(long)]
     std: bool,
 }
@@ -236,6 +241,49 @@ fn main() {
                 .write_all(&elf_data)
                 .expect("failed write sp1 elf to file");
             println!("generated proof");
+
+            // Submit to aligned
+            if args.submit_to_aligned {
+                let proof = bincode::serialize(&proof).expect("failed to serialize proof");
+
+                let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
+
+                // let provider = Provider::<Http>::try_from(rpc_url.clone())
+                //     .expect("Failed to connect to provider");
+
+                let wallet = LocalWallet::from_str(
+                    "2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6",
+                )
+                .expect("Failed to create wallet");
+
+                // let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
+
+                let verification_data = VerificationData {
+                    proving_system: ProvingSystemId::SP1,
+                    proof,
+                    proof_generator_addr: "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
+                        .parse()
+                        .unwrap(),
+                    vm_program_code: Some(elf_data),
+                    verification_key: None,
+                    pub_input: None,
+                };
+
+
+                println!("Submitting proof to aligned for verification");
+
+                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+
+                runtime
+                    .block_on(zkRust::submit_proof_and_wait_for_verification(
+                        verification_data,
+                        wallet,
+                        rpc_url.to_string(),
+                    ))
+                    .expect("failed to submit proof");
+
+                println!("Proof submitted and verified on aligned");
+            }
         }
         Commands::ProveJolt(_) => {
             todo!("Support Jolt once the Verifier is merged on Aligned");
