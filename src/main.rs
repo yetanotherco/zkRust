@@ -128,17 +128,17 @@ fn replace_dependency_to_toml(
 
 // Tmp File directories
 // TODO: create multiple of these for generating multiple proofs at once
-const TMP_GUEST_DIR: &str = "./.tmp_guest";
+const SP1_DIR: &str = "./zkvms/sp1";
 
-const TMP_MAIN: &str = "./.tmp_guest/src/main.rs";
+const TMP_MAIN: &str = "./zkvms/sp1/src/main.rs";
 
-const TMP_CARGO_TOML: &str = "./.tmp_guest/Cargo.toml";
+const TMP_CARGO_TOML: &str = "./zkvms/sp1/Cargo.toml";
 
 // SP1 File additions
 const SP1_GUEST_DEPS_STRING: &str =
     "\nsp1-zkvm = { git = \"https://github.com/succinctlabs/sp1.git\" }\n";
 
-const SP1_ELF_PATH: &str = "./.tmp_guest/elf/riscv32im-succinct-zkvm-elf";
+const SP1_ELF_PATH: &str = "./zkvms/sp1/elf/riscv32im-succinct-zkvm-elf";
 
 const SP1_PROGRAM_HEADER: &str = "#![no_main]\nsp1_zkvm::entrypoint!(main);\n";
 
@@ -165,13 +165,13 @@ const JOLT_HOST_TOOLCHAIN: &[u8] =
 */
 
 // Risc 0 File Additions
-const RISC0_DIR: &str = "./.risc_zero/";
+const RISC0_DIR: &str = "./zkvms/risc0/";
 
-const RISC0_GUEST_DIR: &str = "./.risc_zero/methods/guest/src";
+const RISC0_GUEST_SRC_DIR: &str = "./zkvms/risc0/methods/guest/src";
 
-const RISC0_GUEST_MAIN: &str = "./.risc_zero/methods/guest/src/main.rs";
+const RISC0_GUEST_MAIN: &str = "./zkvms/risc0/methods/guest/src/main.rs";
 
-const RISC0_GUEST_CARGO_TOML: &str = "./.risc_zero/methods/guest/Cargo.toml";
+const RISC0_GUEST_CARGO_TOML: &str = "./zkvms/risc0/methods/guest/Cargo.toml";
 
 const RISC0_GUEST_PROGRAM_HEADER_NO_STD: &str =
     "#![no_main]\n#![no_std]\nrisc0_zkvm::guest::entry!(main);\n";
@@ -188,7 +188,7 @@ fn main() {
         Commands::ProveSp1(args) => {
             println!("'Proving with sp1 program in: {}", args.guest_path);
             // We create a temporary directory to edit the main.rs
-            copy_dir_all(&args.guest_path, TMP_GUEST_DIR).unwrap();
+            copy_dir_all(&args.guest_path, SP1_DIR).unwrap();
             // Add needed file header
             /*
                #![no_main]
@@ -205,7 +205,7 @@ fn main() {
                 cd .tmp_guest
                 cargo prove build
             */
-            let guest_path = fs::canonicalize(TMP_GUEST_DIR).unwrap();
+            let guest_path = fs::canonicalize(SP1_DIR).unwrap();
             Command::new("cargo")
                 .arg("prove")
                 .arg("build")
@@ -335,7 +335,8 @@ fn main() {
             /*
                Copy guest to risc0 guest directory structure
             */
-            fs::create_dir_all(RISC0_GUEST_DIR).unwrap();
+            copy_dir_all(&args.guest_path, SP1_DIR).unwrap();
+            fs::create_dir_all(RISC0_GUEST_SRC_DIR).unwrap();
 
             // Copy the source file to the destination directory
             //TODO: ass prompt specifying assumed path dependency to cli
@@ -350,6 +351,11 @@ fn main() {
                #![no_main]
                risc0_zkvm::guest::entry!(main);
             */
+
+            // Copy the source Cargo.toml to the risc0 guest folder
+            let guest_cargo_toml_path = format!("{}/Cargo.toml", args.guest_path);
+            fs::copy(&guest_cargo_toml_path, &RISC0_GUEST_CARGO_TOML).unwrap();
+
             if args.std {
                 prepend_to_file(RISC0_GUEST_MAIN, RISC0_GUEST_PROGRAM_HEADER_STD).unwrap();
                 replace_dependency_to_toml(
