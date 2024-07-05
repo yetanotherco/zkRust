@@ -22,6 +22,7 @@ enum Commands {
     /// Adds files to myapp
     ProveSp1(ProofArgs),
     ProveRisc0(ProofArgs),
+    ProveJolt(ProofArgs)
 }
 
 #[derive(Args, Debug)]
@@ -54,6 +55,18 @@ fn add_text_after_substring(original_string: &str, substring: &str, text_to_add:
         modified_string.push_str(&original_string[..index + substring.len()]);
         modified_string.push_str(text_to_add);
         modified_string.push_str(&original_string[index + substring.len()..]);
+        modified_string
+    } else {
+        original_string.to_string()
+    }
+}
+
+fn add_before_substring(original_string: &str, substring: &str, text_to_add: &str) -> String {
+    if let Some(index) = original_string.find(substring) {
+        let mut modified_string = String::with_capacity(original_string.len() + text_to_add.len());
+        modified_string.push_str(&original_string[..index]);
+        modified_string.push_str(text_to_add);
+        modified_string.push_str(&original_string[index..]);
         modified_string
     } else {
         original_string.to_string()
@@ -153,6 +166,26 @@ const SP1_PROOF_PATH: &str = "./sp1.proof";
 
 const SP1_PROGRAM_HEADER: &str = "#![no_main]\nsp1_zkvm::entrypoint!(main);\n";
 
+// Jolt File Paths and Additions
+const JOLT_PROOF_PATH: &str = "./jolt.proof";
+
+const JOLT_ELF_PATH: &str = "./jolt.elf";
+
+const JOLT_DIR: &str = "./.jolt/";
+
+const JOLT_GUEST_DIR: &str = "./.jolt/guest/src";
+
+const JOLT_GUEST_MAIN: &str = "./.jolt/guest/src/lib.rs";
+
+const JOLT_GUEST_CARGO_TOML: &str = "./.jolt/guest/Cargo.toml";
+
+const JOLT_GUEST_PROGRAM_HEADER_STD: &str = "#![no_main]\n";
+
+const JOLT_GUEST_PROC_MACRO: &str = "\n#[jolt::provable]\n";
+
+const JOLT_GUEST_DEPS: &str =
+    "\njolt = { package = \"jolt-sdk\", git = \"https://github.com/a16z/jolt\", features = [\"guest-std\"] }";
+
 // Risc0 File Paths and Additions
 const RISC0_PROOF_PATH: &str = "./risc_zero.proof";
 
@@ -214,6 +247,68 @@ fn main() {
                     keystore_path,
                     SP1_PROOF_PATH,
                     SP1_ELF_PATH,
+                    //TODO: Change when Jolt PR is upstreamed
+                    ProvingSystemId::SP1,
+                )
+                .unwrap();
+                println!("Proof submitted and verified on aligned");
+            }
+        }
+        Commands::ProveJolt(args) => {
+            println!("'Proving with Jolt program in: {}", args.guest_path);
+            // Clear contents of src directory
+            fs::remove_dir_all(JOLT_GUEST_DIR).unwrap();
+            fs::create_dir(JOLT_GUEST_DIR).unwrap();
+
+            // Copy the source main to the destination directory
+            let guest_path = format!("{}/src/", args.guest_path);
+            copy_dir_all(guest_path, JOLT_GUEST_DIR).unwrap();
+            fs::rename("./.jolt/guest/src/main.rs", JOLT_GUEST_MAIN).unwrap();
+
+            // Copy dependencies to from guest toml to risc0 project template
+            let toml_path = format!("{}/Cargo.toml", args.guest_path);
+            copy_dependencies(&toml_path, JOLT_GUEST_CARGO_TOML);
+
+            /*
+               #![no_main]
+            */
+            prepend_to_file(JOLT_GUEST_MAIN, JOLT_GUEST_PROGRAM_HEADER_STD).unwrap();
+
+            // Find and replace function name
+            let content = fs::read_to_string(JOLT_GUEST_MAIN).unwrap();
+
+            let modified_content = content.replace("main()", "method()");
+
+            /*
+               #[jolt::provable]
+            */
+            let modified_content =
+                add_before_substring(&modified_content, "fn method()", JOLT_GUEST_PROC_MACRO);
+
+            let mut file = fs::File::create(JOLT_GUEST_MAIN).unwrap();
+            file.write_all(modified_content.as_bytes()).unwrap();
+
+            let guest_path = fs::canonicalize(JOLT_DIR).unwrap();
+            //TODO: propogate errors from this command to stdout/stderr
+            Command::new("cargo")
+                .arg("run")
+                .arg("--release")
+                .current_dir(guest_path)
+                .status()
+                .expect("Prove build failed");
+            println!("Proof and Proof Image generated!");
+
+            // Clear toml of dependencies
+            remove_dependencies(JOLT_GUEST_CARGO_TOML, JOLT_GUEST_DEPS);
+            println!("Proof Generated");
+
+            // Submit to aligned
+            if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                submit_proof_to_aligned(
+                    keystore_path,
+                    JOLT_PROOF_PATH,
+                    JOLT_ELF_PATH,
+                    //TODO: Change when Jolt PR is upstreamed
                     ProvingSystemId::SP1,
                 )
                 .unwrap();
@@ -252,7 +347,6 @@ fn main() {
 
             // Clear toml of dependencies
             remove_dependencies(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS);
-
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
                 submit_proof_to_aligned(
