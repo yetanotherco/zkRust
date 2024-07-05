@@ -22,13 +22,13 @@ fn main() {
 
     // Save proof.
     let proof_data = bincode::serialize(&proof).expect("failed to serialize proof");
-    let mut proof_file = File::create("../../sp1.proof").expect("Failed to create sp1 elf file");
+    let mut proof_file = File::create("../../../sp1.proof").expect("Failed to create sp1 elf file");
     proof_file
         .write_all(&proof_data)
         .expect("failed write sp1 elf to file");
 
     // Save elf
-    let mut elf_file = File::create("../../sp1.elf").expect("Failed to create sp1 elf file");
+    let mut elf_file = File::create("../../../sp1.elf").expect("Failed to create sp1 elf file");
     elf_file
         .write_all(&METHOD_ELF)
         .expect("failed write sp1 elf to file");
