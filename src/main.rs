@@ -1,15 +1,11 @@
-use aligned_sdk::types::{ProvingSystemId, VerificationData};
+use aligned_sdk::types::ProvingSystemId;
 use clap::{Args, Parser, Subcommand};
-use ethers::middleware::SignerMiddleware;
-use ethers::prelude::{LocalWallet, Signer};
-use ethers::providers::{Http, Provider};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Arc;
 use std::{fs, io};
-use zkRust::pay_batcher;
+use zkRust::submit_proof_to_aligned;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -25,7 +21,6 @@ struct Cli {
 enum Commands {
     /// Adds files to myapp
     ProveSp1(ProofArgs),
-    ProveJolt(ProofArgs),
     ProveRisc0(ProofArgs),
 }
 
@@ -59,18 +54,6 @@ fn add_text_after_substring(original_string: &str, substring: &str, text_to_add:
         modified_string.push_str(&original_string[..index + substring.len()]);
         modified_string.push_str(text_to_add);
         modified_string.push_str(&original_string[index + substring.len()..]);
-        modified_string
-    } else {
-        original_string.to_string()
-    }
-}
-
-fn add_before_substring(original_string: &str, substring: &str, text_to_add: &str) -> String {
-    if let Some(index) = original_string.find(substring) {
-        let mut modified_string = String::with_capacity(original_string.len() + text_to_add.len());
-        modified_string.push_str(&original_string[..index]);
-        modified_string.push_str(text_to_add);
-        modified_string.push_str(&original_string[index..]);
         modified_string
     } else {
         original_string.to_string()
@@ -170,26 +153,6 @@ const SP1_PROOF_PATH: &str = "./sp1.proof";
 
 const SP1_PROGRAM_HEADER: &str = "#![no_main]\nsp1_zkvm::entrypoint!(main);\n";
 
-// Jolt File Paths and Additions
-const JOLT_PROOF_PATH: &str = "./jolt.proof";
-
-const JOLT_ELF_PATH: &str = "./jolt.elf";
-
-const JOLT_DIR: &str = "./.jolt/";
-
-const JOLT_GUEST_DIR: &str = "./.jolt/guest/src";
-
-const JOLT_GUEST_MAIN: &str = "./.jolt/guest/src/lib.rs";
-
-const JOLT_GUEST_CARGO_TOML: &str = "./.jolt/guest/Cargo.toml";
-
-const JOLT_GUEST_PROGRAM_HEADER_STD: &str = "#![no_main]\n";
-
-const JOLT_GUEST_PROC_MACRO: &str = "\n#[jolt::provable]\n";
-
-const JOLT_GUEST_DEPS: &str =
-    "\njolt = { package = \"jolt-sdk\", git = \"https://github.com/a16z/jolt\", features = [\"guest-std\"] }";
-
 // Risc0 File Paths and Additions
 const RISC0_PROOF_PATH: &str = "./risc_zero.proof";
 
@@ -247,143 +210,13 @@ fn main() {
 
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
-                let keystore_password = rpassword::prompt_password("Enter keystore password: ")
-                    .expect("Failed to read keystore password");
-
-                let wallet = LocalWallet::decrypt_keystore(keystore_path, keystore_password)
-                    .expect("Failed to decrypt keystore")
-                    .with_chain_id(17000u64);
-
-                let proof = fs::read(SP1_PROOF_PATH).expect("failed to load proof");
-                let elf_data = fs::read(SP1_ELF_PATH).expect("failed to load elf");
-
-                let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
-
-                let provider =
-                    Provider::<Http>::try_from(rpc_url).expect("Failed to connect to provider");
-
-                let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
-
-                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-
-                runtime
-                    .block_on(pay_batcher(wallet.address(), signer.clone()))
-                    .expect("Failed to pay for proof submission");
-
-                let verification_data = VerificationData {
-                    proving_system: ProvingSystemId::SP1,
-                    proof,
-                    proof_generator_addr: wallet.address(),
-                    vm_program_code: Some(elf_data),
-                    verification_key: None,
-                    pub_input: None,
-                };
-
-                println!("Submitting proof to aligned for verification");
-
-                runtime
-                    .block_on(zkRust::submit_proof_and_wait_for_verification(
-                        verification_data,
-                        wallet,
-                        rpc_url.to_string(),
-                    ))
-                    .expect("failed to submit proof");
-
-                println!("Proof submitted and verified on aligned");
-            }
-        }
-        Commands::ProveJolt(args) => {
-            println!("'Proving with Jolt program in: {}", args.guest_path);
-            // Clear contents of src directory
-            fs::remove_dir_all(JOLT_GUEST_DIR).unwrap();
-            fs::create_dir(JOLT_GUEST_DIR).unwrap();
-
-            // Copy the source main to the destination directory
-            let guest_path = format!("{}/src/", args.guest_path);
-            copy_dir_all(guest_path, JOLT_GUEST_DIR).unwrap();
-            fs::rename("./.jolt/guest/src/main.rs", JOLT_GUEST_MAIN).unwrap();
-
-            // Copy dependencies to from guest toml to risc0 project template
-            let toml_path = format!("{}/Cargo.toml", args.guest_path);
-            copy_dependencies(&toml_path, JOLT_GUEST_CARGO_TOML);
-
-            /*
-               #![no_main]
-            */
-            prepend_to_file(JOLT_GUEST_MAIN, JOLT_GUEST_PROGRAM_HEADER_STD).unwrap();
-
-            // Find and replace function name
-            let content = fs::read_to_string(JOLT_GUEST_MAIN).unwrap();
-
-            let modified_content = content.replace("main()", "method()");
-
-            /*
-               #[jolt::provable]
-            */
-            let modified_content =
-                add_before_substring(&modified_content, "fn method()", JOLT_GUEST_PROC_MACRO);
-
-            let mut file = fs::File::create(JOLT_GUEST_MAIN).unwrap();
-            file.write_all(modified_content.as_bytes()).unwrap();
-
-            let guest_path = fs::canonicalize(JOLT_DIR).unwrap();
-            //TODO: propogate errors from this command to stdout/stderr
-            Command::new("cargo")
-                .arg("run")
-                .arg("--release")
-                .current_dir(guest_path)
-                .status()
-                .expect("Prove build failed");
-            println!("Proof and Proof Image generated!");
-
-            // Clear toml of dependencies
-            remove_dependencies(JOLT_GUEST_CARGO_TOML, JOLT_GUEST_DEPS);
-
-            // Submit to aligned
-            if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
-                let keystore_password = rpassword::prompt_password("Enter keystore password: ")
-                    .expect("Failed to read keystore password");
-
-                let wallet = LocalWallet::decrypt_keystore(keystore_path, keystore_password)
-                    .expect("Failed to decrypt keystore")
-                    .with_chain_id(17000u64);
-
-                let proof = fs::read(JOLT_PROOF_PATH).expect("failed to serialize proof");
-                let elf_data = fs::read(JOLT_ELF_PATH).expect("failed to serialize elf");
-
-                let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
-
-                let provider =
-                    Provider::<Http>::try_from(rpc_url).expect("Failed to connect to provider");
-
-                let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
-
-                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-
-                runtime
-                    .block_on(pay_batcher(wallet.address(), signer.clone()))
-                    .expect("Failed to pay for proof submission");
-
-                let verification_data = VerificationData {
-                    //NOTE: Jolt needs to be added to Aligned.
-                    proving_system: ProvingSystemId::Risc0,
-                    proof,
-                    proof_generator_addr: wallet.address(),
-                    vm_program_code: Some(elf_data),
-                    verification_key: None,
-                    pub_input: None,
-                };
-
-                println!("Submitting proof to aligned for verification");
-
-                runtime
-                    .block_on(zkRust::submit_proof_and_wait_for_verification(
-                        verification_data,
-                        wallet,
-                        rpc_url.to_string(),
-                    ))
-                    .expect("failed to submit proof");
-
+                submit_proof_to_aligned(
+                    keystore_path,
+                    SP1_PROOF_PATH,
+                    SP1_ELF_PATH,
+                    ProvingSystemId::SP1,
+                )
+                .unwrap();
                 println!("Proof submitted and verified on aligned");
             }
         }
@@ -422,48 +255,13 @@ fn main() {
 
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
-                let keystore_password = rpassword::prompt_password("Enter keystore password: ")
-                    .expect("Failed to read keystore password");
-
-                let wallet = LocalWallet::decrypt_keystore(keystore_path, keystore_password)
-                    .expect("Failed to decrypt keystore")
-                    .with_chain_id(17000u64);
-
-                let proof = fs::read(RISC0_PROOF_PATH).expect("failed to serialize proof");
-                let elf_data = fs::read(RISC0_IMAGE_PATH).expect("failed to serialize elf");
-
-                let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
-
-                let provider =
-                    Provider::<Http>::try_from(rpc_url).expect("Failed to connect to provider");
-
-                let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
-
-                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-
-                runtime
-                    .block_on(pay_batcher(wallet.address(), signer.clone()))
-                    .expect("Failed to pay for proof submission");
-
-                let verification_data = VerificationData {
-                    proving_system: ProvingSystemId::Risc0,
-                    proof,
-                    proof_generator_addr: wallet.address(),
-                    vm_program_code: Some(elf_data),
-                    verification_key: None,
-                    pub_input: None,
-                };
-
-                println!("Submitting proof to aligned for verification");
-
-                runtime
-                    .block_on(zkRust::submit_proof_and_wait_for_verification(
-                        verification_data,
-                        wallet,
-                        rpc_url.to_string(),
-                    ))
-                    .expect("failed to submit proof");
-
+                submit_proof_to_aligned(
+                    keystore_path,
+                    RISC0_PROOF_PATH,
+                    RISC0_IMAGE_PATH,
+                    ProvingSystemId::Risc0,
+                )
+                .unwrap();
                 println!("Proof submitted and verified on aligned");
             }
         }
