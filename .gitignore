@@ -2,5 +2,12 @@ target/*
 target
 .tmp_guest
 .tmp_guest/*
+
+zkvms/sp1/*
+zkvms/risc0/target
+zkvms/risc0/methods/guest
+zkvms/risc0/methods/target
+zkvms/jolt/*
+
 .DS_Store
 **/.DS_Store

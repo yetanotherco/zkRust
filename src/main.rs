@@ -137,13 +137,13 @@ fn remove_dependencies(guest_toml_path: &str, guest_dependency_path: &str) {
 }
 
 // SP1 File additions
-const SP1_SCRIPT_DIR: &str = "./.sp1/script";
+const SP1_SCRIPT_DIR: &str = "./workspaces/sp1/script";
 
-const SP1_GUEST_DIR: &str = "./.sp1/program/src";
+const SP1_GUEST_DIR: &str = "./workspaces/sp1/program/src";
 
-const SP1_GUEST_MAIN: &str = "./.sp1/program/src/main.rs";
+const SP1_GUEST_MAIN: &str = "./workspaces/sp1/program/src/main.rs";
 
-const SP1_GUEST_CARGO_TOML: &str = "./.sp1/program/Cargo.toml";
+const SP1_GUEST_CARGO_TOML: &str = "./workspaces/sp1/program/Cargo.toml";
 
 const SP1_GUEST_DEPS: &str = "\nsp1-zkvm = { git = \"https://github.com/succinctlabs/sp1.git\" }\n";
 
@@ -158,13 +158,13 @@ const RISC0_PROOF_PATH: &str = "./risc_zero.proof";
 
 const RISC0_IMAGE_PATH: &str = "./risc_zero_image_id.bin";
 
-const RISC0_DIR: &str = "./.risc_zero/";
+const RISC0_DIR: &str = "./workspaces/risc0/";
 
-const RISC0_GUEST_DIR: &str = "./.risc_zero/methods/guest/src";
+const RISC0_GUEST_DIR: &str = "./workspaces/risc0/methods/guest/src";
 
-const RISC0_GUEST_MAIN: &str = "./.risc_zero/methods/guest/src/main.rs";
+const RISC0_GUEST_MAIN: &str = "./workspaces/risc0/methods/guest/src/main.rs";
 
-const RISC0_GUEST_CARGO_TOML: &str = "./.risc_zero/methods/guest/Cargo.toml";
+const RISC0_GUEST_CARGO_TOML: &str = "./workspaces/risc0/methods/guest/Cargo.toml";
 
 const RISC0_GUEST_PROGRAM_HEADER_STD: &str = "#![no_main]\n\nrisc0_zkvm::guest::entry!(main);\n";
 
