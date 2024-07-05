@@ -65,6 +65,18 @@ fn add_text_after_substring(original_string: &str, substring: &str, text_to_add:
     }
 }
 
+fn add_before_substring(original_string: &str, substring: &str, text_to_add: &str) -> String {
+    if let Some(index) = original_string.find(substring) {
+        let mut modified_string = String::with_capacity(original_string.len() + text_to_add.len());
+        modified_string.push_str(&original_string[..index]);
+        modified_string.push_str(text_to_add);
+        modified_string.push_str(&original_string[index..]);
+        modified_string
+    } else {
+        original_string.to_string()
+    }
+}
+
 fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
     // Open the file in read mode to read its existing content
     let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
@@ -158,32 +170,30 @@ const SP1_PROOF_PATH: &str = "./sp1.proof";
 
 const SP1_PROGRAM_HEADER: &str = "#![no_main]\nsp1_zkvm::entrypoint!(main);\n";
 
-// Jolt File Additions
-/*
-const JOLT_TMP_GUEST_DIR: &str = "./.tmp_guest/guest";
+// Jolt File Paths and Additions
+const JOLT_PROOF_PATH: &str = "./jolt.proof";
 
-const JOLT_TMP_MAIN: &str = "./.tmp_guest/guest/src/main.rs";
+const JOLT_ELF_PATH: &str = "./jolt.elf";
 
-const JOLT_TMP_CARGO_TOML: &str = "./.tmp_guest/guest/Cargo.toml";
+const JOLT_DIR: &str = "./.jolt/";
 
-const JOLT_GUEST_TOML: &[u8] = b"[package]\nname = \"guest\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[[bin]]\nname = \"guest\"\npath = \"./src/lib.rs\"\n\n[features]\nguest = []\n\n[dependencies]\njolt = { package = \"jolt-sdk\", git = \"https://github.com/a16z/jolt\", features = [\"guest-std\"] }";
+const JOLT_GUEST_DIR: &str = "./.jolt/guest/src";
 
-const JOLT_GUEST_PROGRAM_HEADER: &str = "#![no_main]\n";
+const JOLT_GUEST_MAIN: &str = "./.jolt/guest/src/lib.rs";
 
-const JOLT_GUEST_FUNCTION_HEADER: &str = "#[jolt::provable]\n";
+const JOLT_GUEST_CARGO_TOML: &str = "./.jolt/guest/Cargo.toml";
 
-const JOLT_HOST_MAIN: &[u8] = b"use std::{io::Write, fs};\n\npub fn main() {\nlet (prove_fibonacci, verify_fibonacci) = guest::build_fibonacci();\n\nlet (program, _) = guest::preprocess_fibonacci();\n\n// Write elf to file outside of tmp directory\nlet elf = fs::read(program.elf.unwrap()).unwrap();\nlet mut file = fs::File::create(\"../guest.elf\").unwrap();\nfile.write_all(&elf).unwrap();\n\nlet (output, proof) = prove_fibonacci(50);\nproof.save_to_file(\"../guest.proof\").unwrap();\n\nlet is_valid = verify_fibonacci(proof);\n\nprintln!(\"output: {}\", output);\nprintln!(\"valid: {}\", is_valid);\n}";
+const JOLT_GUEST_PROGRAM_HEADER_STD: &str = "#![no_main]\n";
 
-const JOLT_HOST_CARGO: &[u8] = b"[package]\nname = \"method\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[workspace]\nmembers = [\"guest\"]\n\n[profile.release]\ndebug = 1\ncodegen-units = 1\nlto = \"fat\"\n\n[dependencies]\njolt = { package = \"jolt-sdk\", git = \"https://github.com/a16z/jolt\", features = [\"host\"] }\nguest = { path = \"./guest\" }\n\n[patch.crates-io]\nark-ff = { git = \"https://github.com/a16z/arkworks-algebra\", branch = \"optimize/field-from-u64\" }\nark-ec = { git = \"https://github.com/a16z/arkworks-algebra\", branch = \"optimize/field-from-u64\" }\nark-serialize = { git = \"https://github.com/a16z/arkworks-algebra\", branch = \"optimize/field-from-u64\" }";
+const JOLT_GUEST_PROC_MACRO: &str = "\n#[jolt::provable]\n";
 
-const JOLT_HOST_TOOLCHAIN: &[u8] =
-    b"[toolchain]\nchannel = \"nightly-2024-04-20\"\ntargets = [\"riscv32i-unknown-none-elf\"]";
-*/
+const JOLT_GUEST_DEPS: &str =
+    "\njolt = { package = \"jolt-sdk\", git = \"https://github.com/a16z/jolt\", features = [\"guest-std\"] }";
 
-// Risc 0 File Additions
-const RISC0_ELF_PATH: &str = "./risc_zero.proof";
+// Risc0 File Paths and Additions
+const RISC0_PROOF_PATH: &str = "./risc_zero.proof";
 
-const RISC0_PROOF_PATH: &str = "./risc_zero_image_id.bin";
+const RISC0_IMAGE_PATH: &str = "./risc_zero_image_id.bin";
 
 const RISC0_DIR: &str = "./.risc_zero/";
 
@@ -227,7 +237,7 @@ fn main() {
                 .arg("run")
                 .arg("--release")
                 .current_dir(guest_path)
-                .output()
+                .status()
                 .expect("Prove build failed");
             println!("Proof and ELF generated!");
 
@@ -282,101 +292,103 @@ fn main() {
                 println!("Proof submitted and verified on aligned");
             }
         }
-        Commands::ProveJolt(_) => {
-            todo!("Support Jolt once the Verifier is merged on Aligned");
+        Commands::ProveJolt(args) => {
+            println!("'Proving with Jolt program in: {}", args.guest_path);
+            // Clear contents of src directory
+            fs::remove_dir_all(JOLT_GUEST_DIR).unwrap();
+            fs::create_dir(JOLT_GUEST_DIR).unwrap();
+
+            // Copy the source main to the destination directory
+            let guest_path = format!("{}/src/", args.guest_path);
+            copy_dir_all(guest_path, JOLT_GUEST_DIR).unwrap();
+            fs::rename("./.jolt/guest/src/main.rs", JOLT_GUEST_MAIN).unwrap();
+
+            // Copy dependencies to from guest toml to risc0 project template
+            let toml_path = format!("{}/Cargo.toml", args.guest_path);
+            copy_dependencies(&toml_path, JOLT_GUEST_CARGO_TOML);
+
             /*
-                println!("'Proving with Jolt program in: {}", args.guest_path);
-                /*
-                   Copy guest to guest directory structure
-                */
-                copy_dir_all(&args.guest_path, JOLT_TMP_GUEST_DIR).unwrap();
-
-                /*
-                   #![cfg_attr(feature = \"guest\", no_std)]
-                   #![no_main]
-                */
-                prepend_to_file(JOLT_TMP_MAIN, JOLT_GUEST_PROGRAM_HEADER).unwrap();
-
-                /*
-                   jolt = { package = "jolt-sdk", git = \"https://github.com/a16z/jolt\" }"
-                */
-                let mut guest_toml_file =
-                    fs::File::create(JOLT_TMP_CARGO_TOML).expect("could not open guest toml file");
-                guest_toml_file
-                    .write_all(&JOLT_GUEST_TOML)
-                    .expect("failed to write guest toml");
-
-                /*
-                   #[jolt::provable];
-                */
-                add_header_to_main(JOLT_TMP_MAIN, JOLT_GUEST_FUNCTION_HEADER).unwrap();
-                fs::rename(JOLT_TMP_MAIN, "./.tmp_guest/guest/src/lib.rs").unwrap();
-
-                // NOTE: Jolt only proves library functions and requires no main function within the library otherwise compilation to fail so we remove it using this hacky fix.
-                let mut contents = String::new();
-                File::open("./.tmp_guest/guest/src/lib.rs")
-                    .unwrap()
-                    .read_to_string(&mut contents)
-                    .unwrap();
-
-                // Define a regular expression to match the main function
-                // TODO: we need a more resilient way of doing this.
-                let main_function_regex = Regex::new(r"(?s)pub fn main\(\) \{.*?\}").unwrap();
-
-                // Remove the main function
-                let modified_contents = main_function_regex.replace(&contents, "").to_string();
-
-                // Write the modified contents back to the file
-                let mut file = File::create("./.tmp_guest/guest/src/lib.rs").unwrap();
-                file.write_all(modified_contents.as_bytes()).unwrap();
-                //remove_text_from_file("./.tmp_guest/guest/src/lib.rs", &main_string).expect("failed to remvoe text");
-
-                // to support std library compatibility we remove the blackbox
-                remove_text_from_file("./.tmp_guest/guest/src/lib.rs", "use std::hint::black_box;")
-                    .expect("failed to remove text");
-
-                /*
-                    create Host main.rs file
-
-                */
-                let src_dir = format!("{}/src", "./.tmp_guest/");
-                fs::create_dir_all(&src_dir).expect("Failed to create src directory");
-                let mut main_file =
-                    fs::File::create("./.tmp_guest/src/main.rs").expect("Failed to create lib.rs file");
-                main_file
-                    .write_all(&JOLT_HOST_MAIN)
-                    .expect("Failed to write to main.rs file");
-
-                /*
-                    create Host Cargo.toml
-                */
-                let mut toml_file = fs::File::create("./.tmp_guest/Cargo.toml")
-                    .expect("Failed to create Host Cargo.toml file");
-                toml_file
-                    .write_all(&JOLT_HOST_CARGO)
-                    .expect("Failed to write to Host Cargo.toml file");
-
-                /*
-                    create Host rust.toolchain
-                */
-                let mut toolchain_file = fs::File::create("./.tmp_guest/rust-toolchain.toml")
-                    .expect("Failed to create rust-toolchain.toml file");
-                toolchain_file
-                    .write_all(JOLT_HOST_TOOLCHAIN)
-                    .expect("Failed to write to host rust-toolchain.toml file");
-
-                let guest_path = fs::canonicalize(TMP_GUEST_DIR).unwrap();
-                Command::new("cargo")
-                    .arg("run")
-                    .arg("--release")
-                    .current_dir(guest_path)
-                    .output()
-                    .expect("Prove build failed");
-                println!("Elf and Proof generated!");
+               #![no_main]
             */
+            prepend_to_file(JOLT_GUEST_MAIN, JOLT_GUEST_PROGRAM_HEADER_STD).unwrap();
+
+            // Find and replace function name
+            let content = fs::read_to_string(JOLT_GUEST_MAIN).unwrap();
+
+            let modified_content = content.replace("main()", "method()");
+
+            /*
+               #[jolt::provable]
+            */
+            let modified_content =
+                add_before_substring(&modified_content, "fn method()", JOLT_GUEST_PROC_MACRO);
+
+            let mut file = fs::File::create(JOLT_GUEST_MAIN).unwrap();
+            file.write_all(modified_content.as_bytes()).unwrap();
+
+            let guest_path = fs::canonicalize(JOLT_DIR).unwrap();
+            //TODO: propogate errors from this command to stdout/stderr
+            Command::new("cargo")
+                .arg("run")
+                .arg("--release")
+                .current_dir(guest_path)
+                .status()
+                .expect("Prove build failed");
+            println!("Proof and Proof Image generated!");
+
+            // Clear toml of dependencies
+            remove_dependencies(JOLT_GUEST_CARGO_TOML, JOLT_GUEST_DEPS);
+
+            // Submit to aligned
+            if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                let keystore_password = rpassword::prompt_password("Enter keystore password: ")
+                    .expect("Failed to read keystore password");
+
+                let wallet = LocalWallet::decrypt_keystore(keystore_path, keystore_password)
+                    .expect("Failed to decrypt keystore")
+                    .with_chain_id(17000u64);
+
+                let proof = fs::read(JOLT_PROOF_PATH).expect("failed to serialize proof");
+                let elf_data = fs::read(JOLT_ELF_PATH).expect("failed to serialize elf");
+
+                let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
+
+                let provider =
+                    Provider::<Http>::try_from(rpc_url).expect("Failed to connect to provider");
+
+                let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
+
+                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+
+                runtime
+                    .block_on(pay_batcher(wallet.address(), signer.clone()))
+                    .expect("Failed to pay for proof submission");
+
+                let verification_data = VerificationData {
+                    //NOTE: Jolt needs to be added to Aligned.
+                    proving_system: ProvingSystemId::Risc0,
+                    proof,
+                    proof_generator_addr: wallet.address(),
+                    vm_program_code: Some(elf_data),
+                    verification_key: None,
+                    pub_input: None,
+                };
+
+                println!("Submitting proof to aligned for verification");
+
+                runtime
+                    .block_on(zkRust::submit_proof_and_wait_for_verification(
+                        verification_data,
+                        wallet,
+                        rpc_url.to_string(),
+                    ))
+                    .expect("failed to submit proof");
+
+                println!("Proof submitted and verified on aligned");
+            }
         }
         Commands::ProveRisc0(args) => {
-            println!("'Proving with Risc0 program in: {}", args.guest_path);
+            println!("Proving with Risc0 program in: {}", args.guest_path);
             // Clear contents of src directory
             fs::remove_dir_all(RISC0_GUEST_DIR).unwrap();
             fs::create_dir(RISC0_GUEST_DIR).unwrap();
@@ -401,7 +413,7 @@ fn main() {
                 .arg("run")
                 .arg("--release")
                 .current_dir(guest_path)
-                .output()
+                .status()
                 .expect("Prove build failed");
             println!("Proof and Proof Image generated!");
 
@@ -418,7 +430,7 @@ fn main() {
                     .with_chain_id(17000u64);
 
                 let proof = fs::read(RISC0_PROOF_PATH).expect("failed to serialize proof");
-                let elf_data = fs::read(RISC0_ELF_PATH).expect("failed to serialize elf");
+                let elf_data = fs::read(RISC0_IMAGE_PATH).expect("failed to serialize elf");
 
                 let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
 
