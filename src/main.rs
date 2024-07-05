@@ -171,6 +171,10 @@ const JOLT_HOST_TOOLCHAIN: &[u8] =
 */
 
 // Risc 0 File Additions
+const RISC0_ELF_PATH: &str = "./risc_zero.proof";
+
+const RISC0_PROOF_PATH: &str = "./risc_zero_image_id.bin";
+
 const RISC0_DIR: &str = "./.risc_zero/";
 
 const RISC0_GUEST_DIR: &str = "./.risc_zero/methods/guest/src";
@@ -240,7 +244,7 @@ fn main() {
             elf_file
                 .write_all(&elf_data)
                 .expect("failed write sp1 elf to file");
-            println!("generated proof");
+            println!("Proof Generated");
 
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
@@ -442,6 +446,53 @@ fn main() {
                 add_dependency_to_toml(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS).unwrap();
             } else {
                 println!("Failed to clear dependencies in Risc0 Toml file, plaese check");
+            }
+
+            // Submit to aligned
+            if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                let keystore_password = rpassword::prompt_password("Enter keystore password: ")
+                    .expect("Failed to read keystore password");
+
+                let wallet = LocalWallet::decrypt_keystore(keystore_path, &keystore_password)
+                    .expect("Failed to decrypt keystore")
+                    .with_chain_id(17000u64);
+
+                let proof = fs::read(&RISC0_PROOF_PATH).expect("failed to serialize proof");
+                let elf_data = fs::read(&RISC0_ELF_PATH).expect("failed to serialize elf");
+
+                let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
+
+                let provider = Provider::<Http>::try_from(rpc_url)
+                    .expect("Failed to connect to provider");
+
+                let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
+
+                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+
+                runtime
+                    .block_on(pay_batcher(wallet.address(), signer.clone()))
+                    .expect("Failed to pay for proof submission");
+
+                let verification_data = VerificationData {
+                    proving_system: ProvingSystemId::Risc0,
+                    proof,
+                    proof_generator_addr: wallet.address(),
+                    vm_program_code: Some(elf_data),
+                    verification_key: None,
+                    pub_input: None,
+                };
+
+                println!("Submitting proof to aligned for verification");
+
+                runtime
+                    .block_on(zkRust::submit_proof_and_wait_for_verification(
+                        verification_data,
+                        wallet,
+                        rpc_url.to_string(),
+                    ))
+                    .expect("failed to submit proof");
+
+                println!("Proof submitted and verified on aligned");
             }
         }
     }
