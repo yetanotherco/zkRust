@@ -19,7 +19,7 @@ To use zkRust, define the code you would like to generate a proof for in a `main
 
 To generate a proof of the execution of your code run the following:
 
-- **Sp1**:
+- **SP1**:
     ```sh
     cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH> .
     ```
@@ -47,10 +47,10 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
 ```
 
 ## Limitations:
-Currently zkRust does not support fully support the following:
+Currently zkRust does not fully support the following:
 
 - Programs with a library structure.
-- VM user Input and Output
+- Programs with I/O operations.
 - VM Precompiles
 
 These are features are planned to be added in later editions.
