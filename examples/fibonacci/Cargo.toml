@@ -1,5 +1,5 @@
 [package]
-name = "fibonacci_no_std"
+name = "fibonacci"
 version = "0.1.0"
 edition = "2021"
 

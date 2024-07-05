@@ -1,8 +1,6 @@
 use aligned_sdk::types::{ProvingSystemId, VerificationData};
 use clap::{Args, Parser, Subcommand};
 use ethers::prelude::{LocalWallet, Signer};
-#[warn(unused_imports)]
-use sp1_sdk::{ProverClient, SP1Stdin};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
@@ -94,12 +92,8 @@ fn add_dependency_to_toml(path: &str, dep_string: &str) -> io::Result<()> {
     let mut content = String::new();
     file.read_to_string(&mut content)?;
 
-    println!("Toml Content: {}", content);
-
     content = add_text_after_substring(&content, "[dependencies]", dep_string);
 
-    println!("Toml Content after add: {}", content);
-
     file.set_len(0)?;
     file.seek(io::SeekFrom::Start(0))?;
     file.write_all(content.as_bytes())?;
@@ -109,42 +103,58 @@ fn add_dependency_to_toml(path: &str, dep_string: &str) -> io::Result<()> {
     Ok(())
 }
 
-fn replace_dependency_to_toml(path: &str, original_string: &str, replace_string: &str) -> io::Result<()> {
-    // Open the file in read write mode to read its existing content
-    let mut file = OpenOptions::new().read(true).write(true).open(path)?;
-
-    // Read the existing content of the file
+fn copy_dependencies(toml_path: &str, guest_toml_path: &str) {
+    let mut toml = std::fs::File::open(toml_path).unwrap();
     let mut content = String::new();
-    file.read_to_string(&mut content)?;
+    toml.read_to_string(&mut content).unwrap();
 
-    //println!("Toml Content: {}", content);
+    if let Some(start_index) = content.find("[dependencies]") {
+        // Get all text after the search string
+        let dependencies = &content[start_index + "[dependencies]".len()..];
+        // Open the output file in append mode
+        let mut guest_toml = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(guest_toml_path).unwrap();
 
-    content = content.replace(original_string, replace_string);
-
-    //println!("Toml Content after add: {}", content);
-
-    file.set_len(0)?;
-    file.seek(io::SeekFrom::Start(0))?;
-    file.write_all(content.as_bytes())?;
-    file.set_len(content.len() as u64)?;
-    file.flush()?;
-
-    Ok(())
+        // Write the text after the search string to the output file
+        guest_toml.write_all(dependencies.as_bytes()).unwrap();
+    } else {
+        println!("Failed to copy dependencies in Guest Toml file, plese check");
+    }
 }
 
-// Tmp File directories
-// TODO: create multiple of these for generating multiple proofs at once
-const TMP_GUEST_DIR: &str = "./.tmp_guest";
+fn remove_dependencies(guest_toml_path: &str, guest_dependency_path: &str) {
+    let mut content = fs::read_to_string(guest_toml_path).unwrap();
+    if let Some(pos) = content.find("[dependencies]") {
+        // Get all text after the search string
+        content.truncate(pos + "[dependencies]".len());
 
-const TMP_MAIN: &str = "./.tmp_guest/src/main.rs";
-
-const TMP_CARGO_TOML: &str = "./.tmp_guest/Cargo.toml";
+        // Write the text after the search string to the output file
+        let mut toml = fs::File::create(guest_toml_path).unwrap();
+        toml.write_all(content.as_bytes()).unwrap();
+        // Append cargo toml dependency
+        add_dependency_to_toml(guest_toml_path, guest_dependency_path).unwrap();
+    } else {
+        println!("Failed to clear dependencies in SP1 Toml file, plaese check");
+    }
+}
 
 // SP1 File additions
-const SP1_GUEST_DEPS_STRING: &str =
+const SP1_SCRIPT_DIR: &str = "./.sp1/script";
+
+const SP1_GUEST_DIR: &str = "./.sp1/program/src";
+
+const SP1_GUEST_MAIN: &str = "./.sp1/program/src/main.rs";
+
+const SP1_GUEST_CARGO_TOML: &str = "./.sp1/program/Cargo.toml";
+
+const SP1_GUEST_DEPS: &str =
     "\nsp1-zkvm = { git = \"https://github.com/succinctlabs/sp1.git\" }\n";
 
-const SP1_ELF_PATH: &str = "./.tmp_guest/elf/riscv32im-succinct-zkvm-elf";
+const SP1_ELF_PATH: &str = "./sp1.elf";
+
+const SP1_PROOF_PATH: &str = "./sp1.proof";
 
 const SP1_PROGRAM_HEADER: &str = "#![no_main]\nsp1_zkvm::entrypoint!(main);\n";
 
@@ -194,56 +204,36 @@ fn main() {
 
     match &cli.command {
         Commands::ProveSp1(args) => {
-            println!("'Proving with sp1 program in: {}", args.guest_path);
-            // We create a temporary directory to edit the main.rs
-            copy_dir_all(&args.guest_path, TMP_GUEST_DIR).unwrap();
-            // Add needed file header
-            /*
-               #![no_main]
-               sp1_zkvm::entrypoint!(main);
-            */
-            prepend_to_file(TMP_MAIN, SP1_PROGRAM_HEADER).unwrap();
+            println!("'Proving with SP1 program in: {}", args.guest_path);
+            fs::remove_dir_all(SP1_GUEST_DIR).unwrap();
+            fs::create_dir(SP1_GUEST_DIR).unwrap();
+
+            // Copy the source main to the destination directory
+            let guest_path = format!("{}/src/", args.guest_path);
+            copy_dir_all(&guest_path, &SP1_GUEST_DIR).unwrap();
+
+            // Copy dependencies to from guest toml to risc0 project template
+            let toml_path = format!("{}/Cargo.toml", args.guest_path);
+            copy_dependencies(&toml_path, SP1_GUEST_CARGO_TOML);
 
             /*
-            sp1-core = { git = "https://github.com/succinctlabs/sp1.git" }
-             */
-            add_dependency_to_toml(TMP_CARGO_TOML, SP1_GUEST_DEPS_STRING).unwrap();
-
-            /*
-                cd .tmp_guest
-                cargo prove build
+                #![no_main]
+                sp1_zkvm::entrypoint!(main);
             */
-            let guest_path = fs::canonicalize(TMP_GUEST_DIR).unwrap();
+            prepend_to_file(SP1_GUEST_MAIN, SP1_PROGRAM_HEADER).unwrap();
+
+            let guest_path = fs::canonicalize(SP1_SCRIPT_DIR).unwrap();
+            //TODO: propogate errors from this command to stdout/stderr
             Command::new("cargo")
-                .arg("prove")
-                .arg("build")
+                .arg("run")
+                .arg("--release")
                 .current_dir(guest_path)
                 .output()
                 .expect("Prove build failed");
+            println!("Proof and ELF generated!");
 
-            let elf_data = fs::read(&SP1_ELF_PATH).expect("unable to read metadata");
-
-            // TODO: Write input to program.
-            let stdin = SP1Stdin::new();
-
-            let client = ProverClient::new();
-            let (pk, vk) = client.setup(&elf_data);
-            let proof = client.prove_compressed(&pk, stdin).expect("proving failed");
-
-
-            // Verify proof.
-            client
-                .verify_compressed(&proof, &vk)
-                .expect("verification failed");
-
-            // Save proof.
-            proof.save("sp1.proof").expect("saving proof failed");
-
-            // Save elf
-            let mut elf_file = fs::File::create("sp1.elf").expect("Failed to create sp1 elf file");
-            elf_file
-                .write_all(&elf_data)
-                .expect("failed write sp1 elf to file");
+            // Clear toml of dependencies
+            remove_dependencies(SP1_GUEST_CARGO_TOML, SP1_GUEST_DEPS);
             println!("Proof Generated");
 
             // Submit to aligned
@@ -254,8 +244,9 @@ fn main() {
                 let wallet = LocalWallet::decrypt_keystore(keystore_path, &keystore_password)
                     .expect("Failed to decrypt keystore")
                     .with_chain_id(17000u64);
-
-                let proof = bincode::serialize(&proof).expect("failed to serialize proof");
+                
+                let proof = fs::read(SP1_PROOF_PATH).expect("failed to load proof");
+                let elf_data = fs::read(SP1_ELF_PATH).expect("failed to load elf");
 
                 let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
 
@@ -397,25 +388,7 @@ fn main() {
 
             // Copy dependencies to from guest toml to risc0 project template
             let toml_path = format!("{}/Cargo.toml", args.guest_path);
-            let mut toml = std::fs::File::open(toml_path).unwrap();
-            let mut content = String::new();
-            toml.read_to_string(&mut content).unwrap();
-
-            if let Some(start_index) = content.find("[dependencies]") {
-                // Get all text after the search string
-                let dependencies = &content[start_index + "[dependencies]".len()..];
-                // Open the output file in append mode
-                let mut guest_toml = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(RISC0_GUEST_CARGO_TOML).unwrap();
-                println!("dependencies: {}", dependencies);
-
-                // Write the text after the search string to the output file
-                guest_toml.write_all(dependencies.as_bytes()).unwrap();
-            } else {
-                println!("Failed to copy dependencies in Guest Toml file, plese check");
-            }
+            copy_dependencies(&toml_path, RISC0_GUEST_CARGO_TOML);
 
             /*
                #![no_main]
@@ -434,19 +407,7 @@ fn main() {
             println!("Proof and Proof Image generated!");
 
             // Clear toml of dependencies
-            let mut content = fs::read_to_string(RISC0_GUEST_CARGO_TOML).unwrap();
-            if let Some(pos) = content.find("[dependencies]") {
-                // Get all text after the search string
-                content.truncate(pos + "[dependencies]".len());
-
-                // Write the text after the search string to the output file
-                let mut toml = fs::File::create(RISC0_GUEST_CARGO_TOML).unwrap();
-                toml.write_all(content.as_bytes()).unwrap();
-                // Append cargo toml dependency
-                add_dependency_to_toml(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS).unwrap();
-            } else {
-                println!("Failed to clear dependencies in Risc0 Toml file, plaese check");
-            }
+            remove_dependencies(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS);
 
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
