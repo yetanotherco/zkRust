@@ -209,7 +209,7 @@ fn main() {
 
             // Copy the source main to the destination directory
             let guest_path = format!("{}/src/", args.guest_path);
-            copy_dir_all(&guest_path, &SP1_GUEST_DIR).unwrap();
+            copy_dir_all(guest_path, SP1_GUEST_DIR).unwrap();
 
             // Copy dependencies to from guest toml to risc0 project template
             let toml_path = format!("{}/Cargo.toml", args.guest_path);
@@ -240,7 +240,7 @@ fn main() {
                 let keystore_password = rpassword::prompt_password("Enter keystore password: ")
                     .expect("Failed to read keystore password");
 
-                let wallet = LocalWallet::decrypt_keystore(keystore_path, &keystore_password)
+                let wallet = LocalWallet::decrypt_keystore(keystore_path, keystore_password)
                     .expect("Failed to decrypt keystore")
                     .with_chain_id(17000u64);
 
@@ -383,7 +383,7 @@ fn main() {
 
             // Copy the source main to the destination directory
             let guest_path = format!("{}/src/", args.guest_path);
-            copy_dir_all(&guest_path, &RISC0_GUEST_DIR).unwrap();
+            copy_dir_all(guest_path, RISC0_GUEST_DIR).unwrap();
 
             // Copy dependencies to from guest toml to risc0 project template
             let toml_path = format!("{}/Cargo.toml", args.guest_path);
@@ -413,12 +413,12 @@ fn main() {
                 let keystore_password = rpassword::prompt_password("Enter keystore password: ")
                     .expect("Failed to read keystore password");
 
-                let wallet = LocalWallet::decrypt_keystore(keystore_path, &keystore_password)
+                let wallet = LocalWallet::decrypt_keystore(keystore_path, keystore_password)
                     .expect("Failed to decrypt keystore")
                     .with_chain_id(17000u64);
 
-                let proof = fs::read(&RISC0_PROOF_PATH).expect("failed to serialize proof");
-                let elf_data = fs::read(&RISC0_ELF_PATH).expect("failed to serialize elf");
+                let proof = fs::read(RISC0_PROOF_PATH).expect("failed to serialize proof");
+                let elf_data = fs::read(RISC0_ELF_PATH).expect("failed to serialize elf");
 
                 let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
 
