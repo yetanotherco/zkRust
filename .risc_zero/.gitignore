@@ -1,8 +1,4 @@
-# Cargo build
-**/target
-
-# Cargo config
-.cargo
-
-# MacOS nuisances
 .DS_Store
+Cargo.lock
+methods/guest/Cargo.lock
+target/
