@@ -1,14 +1,14 @@
 use aligned_sdk::types::{ProvingSystemId, VerificationData};
 use clap::{Args, Parser, Subcommand};
+use ethers::middleware::SignerMiddleware;
 use ethers::prelude::{LocalWallet, Signer};
+use ethers::providers::{Http, Provider};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::{fs, io};
 use std::sync::Arc;
-use ethers::middleware::SignerMiddleware;
-use ethers::providers::{Http, Provider};
+use std::{fs, io};
 use zkRust::pay_batcher;
 
 #[derive(Parser)]
@@ -113,9 +113,10 @@ fn copy_dependencies(toml_path: &str, guest_toml_path: &str) {
         let dependencies = &content[start_index + "[dependencies]".len()..];
         // Open the output file in append mode
         let mut guest_toml = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(guest_toml_path).unwrap();
+            .create(true)
+            .append(true)
+            .open(guest_toml_path)
+            .unwrap();
 
         // Write the text after the search string to the output file
         guest_toml.write_all(dependencies.as_bytes()).unwrap();
@@ -149,8 +150,7 @@ const SP1_GUEST_MAIN: &str = "./.sp1/program/src/main.rs";
 
 const SP1_GUEST_CARGO_TOML: &str = "./.sp1/program/Cargo.toml";
 
-const SP1_GUEST_DEPS: &str =
-    "\nsp1-zkvm = { git = \"https://github.com/succinctlabs/sp1.git\" }\n";
+const SP1_GUEST_DEPS: &str = "\nsp1-zkvm = { git = \"https://github.com/succinctlabs/sp1.git\" }\n";
 
 const SP1_ELF_PATH: &str = "./sp1.elf";
 
@@ -193,8 +193,7 @@ const RISC0_GUEST_MAIN: &str = "./.risc_zero/methods/guest/src/main.rs";
 
 const RISC0_GUEST_CARGO_TOML: &str = "./.risc_zero/methods/guest/Cargo.toml";
 
-const RISC0_GUEST_PROGRAM_HEADER_STD: &str =
-    "#![no_main]\n\nrisc0_zkvm::guest::entry!(main);\n";
+const RISC0_GUEST_PROGRAM_HEADER_STD: &str = "#![no_main]\n\nrisc0_zkvm::guest::entry!(main);\n";
 
 const RISC0_GUEST_DEPS: &str =
     "\nrisc0-zkvm = { git = \"https://github.com/risc0/risc0\", features = [\"std\", \"getrandom\"] }";
@@ -244,14 +243,14 @@ fn main() {
                 let wallet = LocalWallet::decrypt_keystore(keystore_path, &keystore_password)
                     .expect("Failed to decrypt keystore")
                     .with_chain_id(17000u64);
-                
+
                 let proof = fs::read(SP1_PROOF_PATH).expect("failed to load proof");
                 let elf_data = fs::read(SP1_ELF_PATH).expect("failed to load elf");
 
                 let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
 
-                let provider = Provider::<Http>::try_from(rpc_url)
-                    .expect("Failed to connect to provider");
+                let provider =
+                    Provider::<Http>::try_from(rpc_url).expect("Failed to connect to provider");
 
                 let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
 
@@ -285,96 +284,96 @@ fn main() {
         }
         Commands::ProveJolt(_) => {
             todo!("Support Jolt once the Verifier is merged on Aligned");
-        /*
-            println!("'Proving with Jolt program in: {}", args.guest_path);
             /*
-               Copy guest to guest directory structure
+                println!("'Proving with Jolt program in: {}", args.guest_path);
+                /*
+                   Copy guest to guest directory structure
+                */
+                copy_dir_all(&args.guest_path, JOLT_TMP_GUEST_DIR).unwrap();
+
+                /*
+                   #![cfg_attr(feature = \"guest\", no_std)]
+                   #![no_main]
+                */
+                prepend_to_file(JOLT_TMP_MAIN, JOLT_GUEST_PROGRAM_HEADER).unwrap();
+
+                /*
+                   jolt = { package = "jolt-sdk", git = \"https://github.com/a16z/jolt\" }"
+                */
+                let mut guest_toml_file =
+                    fs::File::create(JOLT_TMP_CARGO_TOML).expect("could not open guest toml file");
+                guest_toml_file
+                    .write_all(&JOLT_GUEST_TOML)
+                    .expect("failed to write guest toml");
+
+                /*
+                   #[jolt::provable];
+                */
+                add_header_to_main(JOLT_TMP_MAIN, JOLT_GUEST_FUNCTION_HEADER).unwrap();
+                fs::rename(JOLT_TMP_MAIN, "./.tmp_guest/guest/src/lib.rs").unwrap();
+
+                // NOTE: Jolt only proves library functions and requires no main function within the library otherwise compilation to fail so we remove it using this hacky fix.
+                let mut contents = String::new();
+                File::open("./.tmp_guest/guest/src/lib.rs")
+                    .unwrap()
+                    .read_to_string(&mut contents)
+                    .unwrap();
+
+                // Define a regular expression to match the main function
+                // TODO: we need a more resilient way of doing this.
+                let main_function_regex = Regex::new(r"(?s)pub fn main\(\) \{.*?\}").unwrap();
+
+                // Remove the main function
+                let modified_contents = main_function_regex.replace(&contents, "").to_string();
+
+                // Write the modified contents back to the file
+                let mut file = File::create("./.tmp_guest/guest/src/lib.rs").unwrap();
+                file.write_all(modified_contents.as_bytes()).unwrap();
+                //remove_text_from_file("./.tmp_guest/guest/src/lib.rs", &main_string).expect("failed to remvoe text");
+
+                // to support std library compatibility we remove the blackbox
+                remove_text_from_file("./.tmp_guest/guest/src/lib.rs", "use std::hint::black_box;")
+                    .expect("failed to remove text");
+
+                /*
+                    create Host main.rs file
+
+                */
+                let src_dir = format!("{}/src", "./.tmp_guest/");
+                fs::create_dir_all(&src_dir).expect("Failed to create src directory");
+                let mut main_file =
+                    fs::File::create("./.tmp_guest/src/main.rs").expect("Failed to create lib.rs file");
+                main_file
+                    .write_all(&JOLT_HOST_MAIN)
+                    .expect("Failed to write to main.rs file");
+
+                /*
+                    create Host Cargo.toml
+                */
+                let mut toml_file = fs::File::create("./.tmp_guest/Cargo.toml")
+                    .expect("Failed to create Host Cargo.toml file");
+                toml_file
+                    .write_all(&JOLT_HOST_CARGO)
+                    .expect("Failed to write to Host Cargo.toml file");
+
+                /*
+                    create Host rust.toolchain
+                */
+                let mut toolchain_file = fs::File::create("./.tmp_guest/rust-toolchain.toml")
+                    .expect("Failed to create rust-toolchain.toml file");
+                toolchain_file
+                    .write_all(JOLT_HOST_TOOLCHAIN)
+                    .expect("Failed to write to host rust-toolchain.toml file");
+
+                let guest_path = fs::canonicalize(TMP_GUEST_DIR).unwrap();
+                Command::new("cargo")
+                    .arg("run")
+                    .arg("--release")
+                    .current_dir(guest_path)
+                    .output()
+                    .expect("Prove build failed");
+                println!("Elf and Proof generated!");
             */
-            copy_dir_all(&args.guest_path, JOLT_TMP_GUEST_DIR).unwrap();
-
-            /*
-               #![cfg_attr(feature = \"guest\", no_std)]
-               #![no_main]
-            */
-            prepend_to_file(JOLT_TMP_MAIN, JOLT_GUEST_PROGRAM_HEADER).unwrap();
-
-            /*
-               jolt = { package = "jolt-sdk", git = \"https://github.com/a16z/jolt\" }"
-            */
-            let mut guest_toml_file =
-                fs::File::create(JOLT_TMP_CARGO_TOML).expect("could not open guest toml file");
-            guest_toml_file
-                .write_all(&JOLT_GUEST_TOML)
-                .expect("failed to write guest toml");
-
-            /*
-               #[jolt::provable];
-            */
-            add_header_to_main(JOLT_TMP_MAIN, JOLT_GUEST_FUNCTION_HEADER).unwrap();
-            fs::rename(JOLT_TMP_MAIN, "./.tmp_guest/guest/src/lib.rs").unwrap();
-
-            // NOTE: Jolt only proves library functions and requires no main function within the library otherwise compilation to fail so we remove it using this hacky fix.
-            let mut contents = String::new();
-            File::open("./.tmp_guest/guest/src/lib.rs")
-                .unwrap()
-                .read_to_string(&mut contents)
-                .unwrap();
-
-            // Define a regular expression to match the main function
-            // TODO: we need a more resilient way of doing this.
-            let main_function_regex = Regex::new(r"(?s)pub fn main\(\) \{.*?\}").unwrap();
-
-            // Remove the main function
-            let modified_contents = main_function_regex.replace(&contents, "").to_string();
-
-            // Write the modified contents back to the file
-            let mut file = File::create("./.tmp_guest/guest/src/lib.rs").unwrap();
-            file.write_all(modified_contents.as_bytes()).unwrap();
-            //remove_text_from_file("./.tmp_guest/guest/src/lib.rs", &main_string).expect("failed to remvoe text");
-
-            // to support std library compatibility we remove the blackbox
-            remove_text_from_file("./.tmp_guest/guest/src/lib.rs", "use std::hint::black_box;")
-                .expect("failed to remove text");
-
-            /*
-                create Host main.rs file
-
-            */
-            let src_dir = format!("{}/src", "./.tmp_guest/");
-            fs::create_dir_all(&src_dir).expect("Failed to create src directory");
-            let mut main_file =
-                fs::File::create("./.tmp_guest/src/main.rs").expect("Failed to create lib.rs file");
-            main_file
-                .write_all(&JOLT_HOST_MAIN)
-                .expect("Failed to write to main.rs file");
-
-            /*
-                create Host Cargo.toml
-            */
-            let mut toml_file = fs::File::create("./.tmp_guest/Cargo.toml")
-                .expect("Failed to create Host Cargo.toml file");
-            toml_file
-                .write_all(&JOLT_HOST_CARGO)
-                .expect("Failed to write to Host Cargo.toml file");
-
-            /*
-                create Host rust.toolchain
-            */
-            let mut toolchain_file = fs::File::create("./.tmp_guest/rust-toolchain.toml")
-                .expect("Failed to create rust-toolchain.toml file");
-            toolchain_file
-                .write_all(JOLT_HOST_TOOLCHAIN)
-                .expect("Failed to write to host rust-toolchain.toml file");
-
-            let guest_path = fs::canonicalize(TMP_GUEST_DIR).unwrap();
-            Command::new("cargo")
-                .arg("run")
-                .arg("--release")
-                .current_dir(guest_path)
-                .output()
-                .expect("Prove build failed");
-            println!("Elf and Proof generated!");
-        */
         }
         Commands::ProveRisc0(args) => {
             println!("'Proving with Risc0 program in: {}", args.guest_path);
@@ -423,8 +422,8 @@ fn main() {
 
                 let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
 
-                let provider = Provider::<Http>::try_from(rpc_url)
-                    .expect("Failed to connect to provider");
+                let provider =
+                    Provider::<Http>::try_from(rpc_url).expect("Failed to connect to provider");
 
                 let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
 
