@@ -3,11 +3,11 @@ target
 .tmp_guest
 .tmp_guest/*
 
-workspaces/sp1/*
 workspaces/risc0/target
-workspaces/risc0/methods/*
-workspaces/sp1/*
-workspaces/jolt/*
+workspaces/risc0/Cargo.lock
+workspaces/risc0/methods/guest/*
+workspaces/sp1/program/*
+workspaces/sp1/script/Cargo.lock
 
 .DS_Store
 **/.DS_Store
