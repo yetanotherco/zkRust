@@ -27,6 +27,9 @@ To generate a proof of the execution of your code run the following:
     ```sh
     cargo run --release -- prove-risc0  <PROGRAM_DIRECTORY_PATH> .
     ```
+    Make sure to have [Risc0](https://dev.risczero.com/api/zkvm/quickstart#1-install-the-risc-zero-toolchain) installed with version `v1.0.1`
+
+
 
 To generate your proof and send it to [Aligned Layer](https://github.com/yetanotherco/aligned_layer). First generate a local wallet keystore using `[cast](https://book.getfoundry.sh/cast/).
 
@@ -55,7 +58,7 @@ Currently zkRust does not support fully support the following:
 
 These are features are planned to be added in later editions.
 
-# Acknowledgments 
+# Acknowledgments
 
 [SP1](https://github.com/succinctlabs/sp1.git)
 
