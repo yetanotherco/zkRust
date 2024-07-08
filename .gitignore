@@ -6,7 +6,9 @@ target
 workspaces/risc0/target
 workspaces/risc0/Cargo.lock
 workspaces/risc0/methods/guest/*
+workspaces/risc0/methods/guest/src/main.rs
 workspaces/sp1/program/*
+workspaces/sp1/program/src/main.rs
 workspaces/sp1/script/Cargo.lock
 
 .DS_Store
