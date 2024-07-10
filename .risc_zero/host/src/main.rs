@@ -4,6 +4,7 @@ use methods::{METHOD_ELF, METHOD_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv};
 
 const PROOF_FILE_PATH: &str = "../risc_zero.proof";
+const PUBLIC_INPUT_FILE_PATH: &str = "../risc_zero.pub";
 const IMAGE_ID_FILE_PATH: &str = "../risc_zero_image_id.bin";
 
 fn main() {
@@ -12,9 +13,7 @@ fn main() {
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .init();
 
-    let env = ExecutorEnv::builder()
-        .build()
-        .unwrap();
+    let env = ExecutorEnv::builder().build().unwrap();
 
     // Obtain the default prover.
     let prover = default_prover();
@@ -32,6 +31,9 @@ fn main() {
 
     std::fs::write(IMAGE_ID_FILE_PATH, convert(&METHOD_ID))
         .expect("Failed to write fibonacci_id file");
+
+    std::fs::write(PUBLIC_INPUT_FILE_PATH, receipt.journal.bytes)
+        .expect("Failed to write pub_input file");
 }
 
 pub fn convert(data: &[u32; 8]) -> [u8; 32] {
