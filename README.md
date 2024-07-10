@@ -6,6 +6,12 @@ zkRust supports generating proofs for executable scripts. Specifically, zkRust s
 
 ## Usage:
 
+First install the zkVM toolchains by running:
+
+```sh
+make install
+```
+
 To use zkRust, define the code you would like to generate a proof for in a `main.rs` in a directory with the following structure:
 
 ```
