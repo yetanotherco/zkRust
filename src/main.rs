@@ -184,6 +184,8 @@ fn main() {
             let guest_path = format!("{}/src/", args.guest_path);
             copy_dir_all(guest_path, SP1_GUEST_DIR).unwrap();
 
+            // Copy base toml
+
             // Copy dependencies to from guest toml to risc0 project template
             let toml_path = format!("{}/Cargo.toml", args.guest_path);
             copy_dependencies(&toml_path, SP1_GUEST_CARGO_TOML);
@@ -195,16 +197,23 @@ fn main() {
             prepend_to_file(SP1_GUEST_MAIN, SP1_PROGRAM_HEADER).unwrap();
 
             let guest_path = fs::canonicalize(SP1_SCRIPT_DIR).unwrap();
-            //TODO: propogate errors from this command to stdout/stderr
-            Command::new("cargo")
+
+            if !Command::new("cargo")
                 .arg("run")
                 .arg("--release")
                 .current_dir(guest_path)
                 .status()
-                .expect("Prove build failed");
+                .is_ok()
+            {
+                remove_dependencies(SP1_GUEST_CARGO_TOML, SP1_GUEST_DEPS);
+                println!("Prove build failed");
+            }
+
+            //TODO: if proof not generated clear cargo.toml
             println!("Proof and ELF generated!");
 
             // Clear toml of dependencies
+            // delete cargo.toml
             remove_dependencies(SP1_GUEST_CARGO_TOML, SP1_GUEST_DEPS);
             println!("Proof Generated");
 
@@ -230,6 +239,8 @@ fn main() {
             let guest_path = format!("{}/src/", args.guest_path);
             copy_dir_all(guest_path, RISC0_GUEST_DIR).unwrap();
 
+            // Copy base toml
+
             // Copy dependencies to from guest toml to risc0 project template
             let toml_path = format!("{}/Cargo.toml", args.guest_path);
             copy_dependencies(&toml_path, RISC0_GUEST_CARGO_TOML);
@@ -242,12 +253,16 @@ fn main() {
 
             let guest_path = fs::canonicalize(RISC0_DIR).unwrap();
             //TODO: propogate errors from this command to stdout/stderr
-            Command::new("cargo")
+            if !Command::new("cargo")
                 .arg("run")
                 .arg("--release")
                 .current_dir(guest_path)
                 .status()
-                .expect("Prove build failed");
+                .is_ok()
+            {
+                remove_dependencies(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS);
+                println!("Prove build failed");
+            }
             println!("Proof and Proof Image generated!");
 
             // Clear toml of dependencies
