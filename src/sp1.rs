@@ -9,8 +9,8 @@ pub const SP1_SRC_DIR: &str = "./workspaces/sp1/program/src";
 pub const SP1_GUEST_MAIN: &str = "./workspaces/sp1/program/src/main.rs";
 pub const SP1_BASE_CARGO_TOML: &str = "./workspaces/base_files/sp1";
 pub const SP1_GUEST_CARGO_TOML: &str = "./workspaces/sp1/program/Cargo.toml";
-pub const SP1_ELF_PATH: &str = "./sp1.elf";
-pub const SP1_PROOF_PATH: &str = "./sp1.proof";
+pub const SP1_ELF_PATH: &str = "./proof_data/sp1/sp1.elf";
+pub const SP1_PROOF_PATH: &str = "./proof_data/sp1/sp1.proof";
 
 /// SP1 header added to programs for generating proofs of their execution
 pub const SP1_PROGRAM_HEADER: &str = "#![no_main]\nsp1_zkvm::entrypoint!(main);\n";
