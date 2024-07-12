@@ -139,13 +139,15 @@ fn remove_dependencies(guest_toml_path: &str, guest_dependency_path: &str) {
 // SP1 File additions
 const SP1_SCRIPT_DIR: &str = "./workspaces/sp1/script";
 
-const SP1_GUEST_DIR: &str = "./workspaces/sp1/program/src";
+const SP1_GUEST_DIR: &str = "./workspaces/sp1/program/";
+
+const SP1_SRC_DIR: &str = "./workspaces/sp1/program/src";
 
 const SP1_GUEST_MAIN: &str = "./workspaces/sp1/program/src/main.rs";
 
-const SP1_GUEST_CARGO_TOML: &str = "./workspaces/sp1/program/Cargo.toml";
+const SP1_BASE_CARGO_TOML: &str = "./workspaces/common/sp1";
 
-const SP1_GUEST_DEPS: &str = "\nsp1-zkvm = { git = \"https://github.com/succinctlabs/sp1.git\" }\n";
+const SP1_GUEST_CARGO_TOML: &str = "./workspaces/sp1/program/Cargo.toml";
 
 const SP1_ELF_PATH: &str = "./sp1.elf";
 
@@ -160,9 +162,13 @@ const RISC0_IMAGE_PATH: &str = "./risc_zero_image_id.bin";
 
 const RISC0_DIR: &str = "./workspaces/risc0/";
 
-const RISC0_GUEST_DIR: &str = "./workspaces/risc0/methods/guest/src";
+const RISC0_GUEST_DIR: &str = "./workspaces/risc0/methods/guest/";
+
+const RISC0_SRC_DIR: &str = "./workspaces/risc0/methods/guest/src";
 
 const RISC0_GUEST_MAIN: &str = "./workspaces/risc0/methods/guest/src/main.rs";
+
+const RISC0_BASE_CARGO_TOML: &str = "./workspaces/common/risc0";
 
 const RISC0_GUEST_CARGO_TOML: &str = "./workspaces/risc0/methods/guest/Cargo.toml";
 
@@ -176,15 +182,15 @@ fn main() {
 
     match &cli.command {
         Commands::ProveSp1(args) => {
-            println!("'Proving with SP1 program in: {}", args.guest_path);
-            fs::remove_dir_all(SP1_GUEST_DIR).unwrap();
-            fs::create_dir(SP1_GUEST_DIR).unwrap();
+            println!("'Proving with SP1, program in: {}", args.guest_path);
 
             // Copy the source main to the destination directory
+            fs::create_dir(&SP1_SRC_DIR).unwrap();
             let guest_path = format!("{}/src/", args.guest_path);
-            copy_dir_all(guest_path, SP1_GUEST_DIR).unwrap();
+            copy_dir_all(guest_path, SP1_SRC_DIR).unwrap();
 
-            // Copy base toml
+            // Copy new cargo.toml from common
+            fs::copy(SP1_BASE_CARGO_TOML, SP1_GUEST_CARGO_TOML).unwrap();
 
             // Copy dependencies to from guest toml to risc0 project template
             let toml_path = format!("{}/Cargo.toml", args.guest_path);
@@ -205,7 +211,9 @@ fn main() {
                 .status()
                 .is_ok()
             {
-                remove_dependencies(SP1_GUEST_CARGO_TOML, SP1_GUEST_DEPS);
+                //fs::remove_file(&SP1_GUEST_CARGO_TOML).unwrap();
+                fs::remove_dir_all(SP1_GUEST_DIR).unwrap();
+                fs::create_dir(SP1_GUEST_DIR).unwrap();
                 println!("Prove build failed");
             }
 
@@ -214,7 +222,6 @@ fn main() {
 
             // Clear toml of dependencies
             // delete cargo.toml
-            remove_dependencies(SP1_GUEST_CARGO_TOML, SP1_GUEST_DEPS);
             println!("Proof Generated");
 
             // Submit to aligned
@@ -228,18 +235,20 @@ fn main() {
                 .unwrap();
                 println!("Proof submitted and verified on aligned");
             }
+
+            //  Remove files main and Cargo files from directory
+            fs::remove_dir_all(SP1_GUEST_DIR).unwrap();
+            fs::create_dir(SP1_GUEST_DIR).unwrap();
         }
         Commands::ProveRisc0(args) => {
-            println!("Proving with Risc0 program in: {}", args.guest_path);
-            // Clear contents of src directory
-            fs::remove_dir_all(RISC0_GUEST_DIR).unwrap();
-            fs::create_dir(RISC0_GUEST_DIR).unwrap();
+            println!("Proving with Risc0, program in: {}", args.guest_path);
 
             // Copy the source main to the destination directory
             let guest_path = format!("{}/src/", args.guest_path);
-            copy_dir_all(guest_path, RISC0_GUEST_DIR).unwrap();
+            copy_dir_all(guest_path, RISC0_SRC_DIR).unwrap();
 
-            // Copy base toml
+            // Rewrite cargo.toml from common
+            fs::copy(RISC0_BASE_CARGO_TOML, RISC0_GUEST_CARGO_TOML).unwrap();
 
             // Copy dependencies to from guest toml to risc0 project template
             let toml_path = format!("{}/Cargo.toml", args.guest_path);
@@ -260,7 +269,8 @@ fn main() {
                 .status()
                 .is_ok()
             {
-                remove_dependencies(RISC0_GUEST_CARGO_TOML, RISC0_GUEST_DEPS);
+                fs::remove_dir_all(RISC0_GUEST_DIR).unwrap();
+                fs::create_dir(RISC0_GUEST_DIR).unwrap();
                 println!("Prove build failed");
             }
             println!("Proof and Proof Image generated!");
@@ -279,6 +289,10 @@ fn main() {
                 .unwrap();
                 println!("Proof submitted and verified on aligned");
             }
+
+            // Remove guest directory and create new one
+            fs::remove_dir_all(RISC0_GUEST_DIR).unwrap();
+            fs::create_dir(RISC0_GUEST_DIR).unwrap();
         }
     }
 }
