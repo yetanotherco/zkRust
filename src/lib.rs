@@ -12,6 +12,10 @@ use ethers::providers::{Http, Provider};
 use ethers::signers::{LocalWallet, Wallet};
 use ethers::types::Address;
 
+pub mod risc0;
+pub mod sp1;
+pub mod utils;
+
 const BATCHER_URL: &str = "wss://batcher.alignedlayer.com";
 const BATCHER_PAYMENTS_ADDRESS: &str = "0x815aeCA64a974297942D2Bbf034ABEe22a38A003";
 
