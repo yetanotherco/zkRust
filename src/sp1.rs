@@ -1,4 +1,7 @@
-use std::{fs, io, process::Command};
+use std::{
+    fs, io,
+    process::{Command, Stdio},
+};
 
 use crate::utils;
 
@@ -33,8 +36,7 @@ pub fn generate_sp1_proof() -> io::Result<()> {
         .arg("run")
         .arg("--release")
         .current_dir(guest_path)
-        .status()
-        .unwrap();
+        .status()?;
 
     Ok(())
 }
