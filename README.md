@@ -4,6 +4,14 @@ CLI tool to prove your rust code easily using either SP1 or Risc0.
 
 zkRust supports generating proofs for executable scripts. Specifically, zkRust supports generating proofs for executable programs with inputs, code, and outputs known at compile time and defined within a `main()` function and `main.rs` file.
 
+## Installation:
+
+First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains by running:
+
+```sh
+make install
+```
+
 ## Usage:
 
 To use zkRust, define the code you would like to generate a proof for in a `main.rs` in a directory with the following structure:
@@ -27,6 +35,9 @@ To generate a proof of the execution of your code run the following:
     ```sh
     cargo run --release -- prove-risc0  <PROGRAM_DIRECTORY_PATH> .
     ```
+    Make sure to have [Risc0](https://dev.risczero.com/api/zkvm/quickstart#1-install-the-risc-zero-toolchain) installed with version `v1.0.1`
+
+
 
 To generate your proof and send it to [Aligned Layer](https://github.com/yetanotherco/aligned_layer). First generate a local wallet keystore using `[cast](https://book.getfoundry.sh/cast/).
 
@@ -55,7 +66,7 @@ Currently zkRust does not support fully support the following:
 
 These are features are planned to be added in later editions.
 
-# Acknowledgments 
+# Acknowledgments
 
 [SP1](https://github.com/succinctlabs/sp1.git)
 
