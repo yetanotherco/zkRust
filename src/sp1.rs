@@ -1,7 +1,4 @@
-use std::{
-    fs, io,
-    process::{Command, Stdio},
-};
+use std::{fs, io, process::Command};
 
 use crate::utils;
 
