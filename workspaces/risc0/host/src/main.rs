@@ -3,9 +3,9 @@
 use methods::{METHOD_ELF, METHOD_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv};
 
-const PROOF_FILE_PATH: &str = "../risc_zero.proof";
-const PUBLIC_INPUT_FILE_PATH: &str = "../risc_zero.pub";
-const IMAGE_ID_FILE_PATH: &str = "../risc_zero_image_id.bin";
+const PROOF_FILE_PATH: &str = "../../proof_data/risc0/risc0.proof";
+const IMAGE_ID_FILE_PATH: &str = "../../proof_data/risc0/risc0.imageid";
+const PUBLIC_INPUT_FILE_PATH: &str = "../../proof_data/risc0/risc0_pub_input.pub";
 
 fn main() {
     // Initialize tracing. In order to view logs, run `RUST_LOG=info cargo run`
@@ -28,10 +28,8 @@ fn main() {
     let serialized = bincode::serialize(&receipt).unwrap();
 
     std::fs::write(PROOF_FILE_PATH, serialized).expect("Failed to write proof file");
-
     std::fs::write(IMAGE_ID_FILE_PATH, convert(&METHOD_ID))
         .expect("Failed to write fibonacci_id file");
-
     std::fs::write(PUBLIC_INPUT_FILE_PATH, receipt.journal.bytes)
         .expect("Failed to write pub_input file");
 }
