@@ -1,5 +1,6 @@
 use aligned_sdk::types::ProvingSystemId;
 use clap::{Args, Parser, Subcommand};
+use log::info;
 use std::io;
 use std::path::PathBuf;
 use zkRust::risc0;
@@ -35,11 +36,12 @@ struct ProofArgs {
 }
 
 fn main() -> io::Result<()> {
+    env_logger::init();
     let cli = Cli::parse();
 
     match &cli.command {
         Commands::ProveSp1(args) => {
-            println!("Proving with SP1, program in: {}", args.guest_path);
+            info!("proving with sp1, program in: {}", args.guest_path);
 
             utils::prepare_workspace(
                 &args.guest_path,
@@ -51,7 +53,7 @@ fn main() -> io::Result<()> {
             sp1::prepare_sp1_program()?;
             sp1::generate_sp1_proof()?;
 
-            println!("Proof and ELF generated!");
+            info!("sp1 proof and ELF generated");
 
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
@@ -62,14 +64,14 @@ fn main() -> io::Result<()> {
                     ProvingSystemId::SP1,
                 )
                 .unwrap();
-                println!("Proof submitted and verified on aligned");
+                info!("sp1 proof submitted and verified on aligned");
             }
 
             Ok(())
         }
 
         Commands::ProveRisc0(args) => {
-            println!("Proving with Risc0, program in: {}", args.guest_path);
+            info!("proving with risc0, program in: {}", args.guest_path);
 
             utils::prepare_workspace(
                 &args.guest_path,
@@ -81,7 +83,7 @@ fn main() -> io::Result<()> {
             risc0::prepare_risc0_guest()?;
             risc0::generate_risc0_proof()?;
 
-            println!("Proof and Proof Image generated!");
+            info!("risc0 proof and image ID generated");
 
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
@@ -93,7 +95,7 @@ fn main() -> io::Result<()> {
                 )
                 .unwrap();
 
-                println!("Proof submitted and verified on aligned");
+                info!("risc0 proof submitted and verified on aligned");
             }
 
             Ok(())
