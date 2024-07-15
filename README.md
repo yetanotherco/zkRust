@@ -6,10 +6,60 @@ zkRust supports generating proofs for executable scripts. Specifically, zkRust s
 
 ## Installation:
 
-First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains by running:
+First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains from [risc0](https://github.com/risc0/risc0) and [sp1](https://github.com/succinctlabs/sp1) by running:
 
 ```sh
 make install
+```
+
+## Quickstart
+
+You can test zkRust for any of the examples in the `examples` folder. This include:
+* a Fibonacci program
+* a RSA program
+* an ECDSA program
+* a simple blockchain state diff program
+
+Run one of the following commands to test zkRust. You can choose either risc0 or sp1:
+
+**Fibonacci**:
+
+```bash
+make prove_risc0_fibonacci
+```
+
+```bash
+make prove_sp1_fibonacci
+```
+
+**RSA**:
+
+```bash
+make prove_risc0_rsa
+```
+
+```bash
+make prove_sp1_rsa
+```
+
+**ECDSA**:
+
+```bash
+make prove_risc0_ecdsa
+```
+
+```bash
+make prove_sp1_ecdsa
+```
+
+**Blockchain state diff**:
+
+```bash
+make prove_risc0_blockchain_state
+```
+
+```bash
+make prove_sp1_blockchain_state
 ```
 
 ## Usage:
