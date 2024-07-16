@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use aligned_sdk::core::types::{AlignedVerificationData, Chain, ProvingSystemId, VerificationData};
 use aligned_sdk::sdk::{submit, verify_proof_onchain};
-use aligned_sdk::types::{AlignedVerificationData, Chain, ProvingSystemId, VerificationData};
 use dialoguer::Confirm;
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
@@ -37,7 +37,7 @@ pub async fn submit_proof_and_wait_for_verification(
 
             for _ in 0..10 {
                 if verify_proof_onchain(
-                    aligned_verification_data.clone(),
+                    &aligned_verification_data,
                     Chain::Holesky,
                     rpc_url.as_str(),
                 )
@@ -102,6 +102,7 @@ pub fn submit_proof_to_aligned(
     keystore_path: PathBuf,
     proof_path: &str,
     elf_path: &str,
+    pub_input_path: Option<&str>,
     proof_system_id: ProvingSystemId,
 ) -> anyhow::Result<()> {
     let keystore_password = rpassword::prompt_password("Enter keystore password: ")
@@ -111,8 +112,10 @@ pub fn submit_proof_to_aligned(
         .expect("Failed to decrypt keystore")
         .with_chain_id(17000u64);
 
-    let proof = fs::read(proof_path).expect("failed to serialize proof");
-    let elf_data = fs::read(elf_path).expect("failed to serialize elf");
+    let proof = fs::read(proof_path).expect("failed to read proof");
+    let elf_data = fs::read(elf_path).expect("failed to read ELF");
+    let pub_input = pub_input_path
+        .map(|pub_input_path| fs::read(pub_input_path).expect("failed to read public input"));
 
     let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
 
@@ -132,7 +135,7 @@ pub fn submit_proof_to_aligned(
         proof_generator_addr: wallet.address(),
         vm_program_code: Some(elf_data),
         verification_key: None,
-        pub_input: None,
+        pub_input,
     };
 
     println!("Submitting proof to aligned for verification");

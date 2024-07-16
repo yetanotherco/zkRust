@@ -19,7 +19,7 @@ sp1-sdk = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.0.8-testn
 risc0-zkvm = { git = "https://github.com/risc0/risc0.git", tag = "v1.0.1" }
 
 # Aligned SDK
-aligned-sdk = { git = "https://github.com/yetanotherco/aligned_layer", tag = "v0.2.1" }
+aligned-sdk = { git = "https://github.com/yetanotherco/aligned_layer", tag = "v0.3.0" }
 ethers = { tag = "v2.0.15-fix-reconnections", features = [
     "ws",
     "rustls",
