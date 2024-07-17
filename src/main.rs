@@ -33,7 +33,7 @@ struct ProofArgs {
     #[clap(long)]
     submit_to_aligned_with_keystore: Option<PathBuf>,
     #[clap(long)]
-    std: bool,
+    io: bool
     #[clap(long)]
     precompiles: bool,
 }
@@ -52,8 +52,13 @@ fn main() -> io::Result<()> {
                 sp1::SP1_GUEST_CARGO_TOML,
                 sp1::SP1_BASE_CARGO_TOML,
             )?;
+            std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
 
             sp1::prepare_sp1_program()?;
+            if args.io {
+                sp1::prepare_guest_io()?;
+                sp1::prepare_host_io(&args.guest_path)?;
+            }
 
             if args.precompiles {
                 utils::insert(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "[workspace]").unwrap();
@@ -78,20 +83,39 @@ fn main() -> io::Result<()> {
                 info!("sp1 proof submitted and verified on aligned");
             }
 
+            std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
+
             Ok(())
         }
 
         Commands::ProveRisc0(args) => {
             info!("proving with risc0, program in: {}", args.guest_path);
 
+            //TODO: to add input to the guest we need to modify the host....
+            // This shouldn't be ridiculously hard if we get
             utils::prepare_workspace(
                 &args.guest_path,
                 risc0::RISC0_SRC_DIR,
                 risc0::RISC0_GUEST_CARGO_TOML,
                 risc0::RISC0_BASE_CARGO_TOML,
             )?;
+            std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
 
+            /*
+             Two ways one with and one without.... in without case would need to remove the thing.
+             we should have the developer declare the type in the following syntax 
+                let n: T = zkrust::read();
+            TODO:
+                need to grab variable name via regex
+                need to write that name into host with correct extensions
+             Type in zkrust::write() needs to be serializable
+             Idea what if we wrapped the serialization methods????
+            */
             risc0::prepare_risc0_guest()?;
+            if args.io {
+                risc0::prepare_guest_io()?;
+                risc0::prepare_host_io(&args.guest_path)?;
+            }
 
             if args.precompiles {
                 utils::insert(risc0::RISC0_GUEST_CARGO_TOML, risc0::RISC0_ACCELERATION_IMPORT, "[workspace]").unwrap();
@@ -115,6 +139,9 @@ fn main() -> io::Result<()> {
 
                 info!("risc0 proof submitted and verified on aligned");
             }
+
+            // Clear Host file
+            std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
 
             Ok(())
         }

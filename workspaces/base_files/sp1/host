@@ -19,15 +19,14 @@ fn main() {
 
     let client = ProverClient::new();
     let (pk, vk) = client.setup(METHOD_ELF);
-
-    let proof = client
-        .prove(&pk, stdin)
-        .compressed()
-        .run()
-        .expect("Could not generate proof");
+    let mut proof = client
+        .prove_compressed(&pk, stdin)
+        .expect("failed to generate proof");
 
     // Verify the proof.
-    client.verify(&proof, &vk).expect("failed to verify proof");
+    client
+        .verify_compressed(&proof, &vk)
+        .expect("failed to verify proof");
 
     // OUTPUT //
 
