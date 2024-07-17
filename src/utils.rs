@@ -1,6 +1,6 @@
 use std::{
     fs::{self, OpenOptions},
-    io::{self, ErrorKind, Read, Seek, Write},
+    io::{self, BufRead, ErrorKind, Read, Seek, Write},
     path::Path,
 };
 use regex::Regex;
@@ -174,6 +174,7 @@ pub fn extract_regex(file_path: &str, exp: &str) -> io::Result<Option<String>> {
 pub fn extract(
     target_file: &str,
     search_string: &str,
+    truncation: usize,
 ) -> io::Result<Option<String>> {
     // Read the contents of the target file
     let mut target_contents = String::new();
@@ -185,7 +186,7 @@ pub fn extract(
         let content = &target_contents[pos + search_string.len()..];
 
         // remove trailing curly brace
-        let res = content[..content.len() - 1].to_string();
+        let res = content[..content.len() - truncation].to_string();
         
         return Ok(Some(res))
     } else {
@@ -193,6 +194,47 @@ pub fn extract(
     }
 
     Ok(None)
+}
+
+pub fn extract_values(file_path: &str, search_text: &str) -> io::Result<Vec<String>> {
+    let file = fs::File::open(file_path)?;
+    let reader = io::BufReader::new(file);
+    
+    let mut values = Vec::new();
+    let regex = Regex::new(&format!(r"{}[(](.*?)[)]", regex::escape(search_text))).unwrap();
+
+    for line in reader.lines() {
+        let line = line?;
+        for cap in regex.captures_iter(&line) {
+            if let Some(matched) = cap.get(1) {
+                values.push(matched.as_str().to_string());
+            }
+        }
+    }
+
+    Ok(values)
+}
+
+pub fn remove_lines(file_path: &str, target: &str) -> io::Result<()> {
+
+    // Read the file line by line
+    let file = fs::File::open(file_path)?;
+    let reader = io::BufReader::new(file);
+
+    // Collect lines that do not contain the target string
+    let lines: Vec<String> = reader
+        .lines()
+        .filter_map(|line| line.ok())
+        .filter(|line| !line.contains(target))
+        .collect();
+
+    // Write the filtered lines back to the file
+    let mut file = fs::File::create(&file_path)?;
+    for line in lines {
+        writeln!(file, "{}", line)?;
+    }
+
+    Ok(())
 }
 
 pub fn insert(

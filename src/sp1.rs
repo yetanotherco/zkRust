@@ -1,6 +1,6 @@
 use std::{fs, io, process::Command};
 
-use crate::utils::{self, extract_regex, insert, HOST_OUTPUT, INPUT_FUNC};
+use crate::utils;
 
 /// SP1 workspace directories
 pub const SP1_SCRIPT_DIR: &str = "./workspaces/sp1/script";
@@ -55,14 +55,14 @@ pub fn prepare_guest_io() -> io::Result<()> {
 pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     // Extract input body
     let input_path = format!("{}/src/input.rs", guest_path);
-    let input = utils::extract(&input_path, utils::INPUT_FUNC)?.unwrap();
+    let input = utils::extract(&input_path, utils::INPUT_FUNC, 1)?.unwrap();
     // Extract output body
     let output_path = format!("{}/src/output.rs", guest_path);
-    let output = utils::extract(&output_path, utils::OUTPUT_FUNC)?.unwrap();
+    let output = utils::extract(&output_path, utils::OUTPUT_FUNC, 1)?.unwrap();
     // Insert input body
-    insert(SP1_HOST_MAIN, &input, utils::HOST_INPUT)?;
+    utils::insert(SP1_HOST_MAIN, &input, utils::HOST_INPUT)?;
     // Insert output body
-    insert(SP1_HOST_MAIN, &output, utils::HOST_OUTPUT)?;
+    utils::insert(SP1_HOST_MAIN, &output, utils::HOST_OUTPUT)?;
     // replace zkRust::write
     utils::replace(SP1_HOST_MAIN, utils::IO_WRITE, SP1_HOST_WRITE)?;
     // replace zkRust::out()
