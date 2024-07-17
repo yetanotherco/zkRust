@@ -13,7 +13,13 @@ fn main() {
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .init();
 
-    let env = ExecutorEnv::builder().build().unwrap();
+    // INPUT //
+    let pattern = "a+".to_string();
+    let target_string = "an era of truth, not trust".to_string();
+
+    // Write in a simple regex pattern.
+
+    let env = ExecutorEnv::builder().write(&pattern).unwrap().write(&target_string).unwrap().build().unwrap();
 
     // Obtain the default prover.
     let prover = default_prover();
@@ -24,6 +30,11 @@ fn main() {
     let verification_result = receipt.verify(METHOD_ID).is_ok();
 
     println!("Verification result: {}", verification_result);
+
+    // OUTPUT //
+    // Read the output.
+    let res: bool = receipt.journal.decode().unwrap();
+    println!("res: {}", res);
 
     let serialized = bincode::serialize(&receipt).unwrap();
 
