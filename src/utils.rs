@@ -3,6 +3,7 @@ use std::{
     io::{self, ErrorKind, Read, Seek, Write},
     path::Path,
 };
+use regex::Regex;
 
 pub fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
     // Open the file in read mode to read its existing content
@@ -72,10 +73,113 @@ pub fn prepare_workspace(
     }
     fs::create_dir_all(workspace_program_src_dir)?;
     let workspace_program_path = format!("{}/src/", guest_path);
-    copy_dir_all(&workspace_program_path, workspace_program_src_dir).unwrap();
-    fs::copy(base_toml_dir, workspace_program_toml_dir).unwrap();
+    copy_dir_all(&workspace_program_path, workspace_program_src_dir)?;
+    fs::copy(base_toml_dir, workspace_program_toml_dir)?;
     let toml_path = format!("{}/Cargo.toml", guest_path);
     copy_dependencies(&toml_path, workspace_program_toml_dir);
+
+    Ok(())
+}
+
+// Host
+pub const IO_WRITE: &str = "zkRust::write";
+pub const IO_OUT: &str = "zkRust::out();";
+
+// Guest
+pub const IO_READ: &str = "zkRust::read();";
+pub const IO_COMMIT: &str = "zkRust::commit";
+
+pub fn replace(
+    file_path: &str,
+    search_string: &str,
+    replace_string: &str,
+) -> io::Result<()> {
+    // Read the contents of the file
+    let mut contents = String::new();
+    fs::File::open(file_path)?.read_to_string(&mut contents)?;
+
+    // Replace all occurrences of the search string with the replace string
+    let new_contents = contents.replace(search_string, replace_string);
+
+    // Write the new contents back to the file
+    let mut file = fs::File::create(&file_path)?;
+    file.write_all(new_contents.as_bytes())?;
+
+    Ok(())
+}
+
+pub const OUTPUT_FUNC: &str = r"pub fn output() {";
+pub const INPUT_FUNC: &str = r"pub fn input() {";
+
+pub const HOST_INPUT: &str = "// INPUT //";
+pub const HOST_OUTPUT: &str = "// OUTPUT //";
+
+pub fn extract_regex(file_path: &str, exp: &str) -> io::Result<Option<String>> {
+    // Read the contents of the file
+    let mut contents = String::new();
+    fs::File::open(file_path)?.read_to_string(&mut contents)?;
+
+    // Define the regular expression to match the function body
+    let re = Regex::new(exp).unwrap();
+
+    // Capture the content inside the brackets of the function
+    if let Some(captures) = re.captures(&contents) {
+        if let Some(matched) = captures.get(1) {
+            return Ok(Some(matched.as_str().to_string()));
+        }
+    }
+
+    // Return None if no match is found
+    Ok(None)
+}
+
+pub fn extract(
+    target_file: &str,
+    search_string: &str,
+) -> io::Result<Option<String>> {
+    // Read the contents of the target file
+    let mut target_contents = String::new();
+    fs::File::open(&target_file)?.read_to_string(&mut target_contents)?;
+
+    // Find the position of the search string in the target file
+    if let Some(pos) = target_contents.find(search_string) {
+        // Split the target contents into two parts
+        let content = &target_contents[pos + search_string.len()..];
+
+        // remove trailing curly brace
+        let res = content[..content.len() - 1].to_string();
+        
+        return Ok(Some(res))
+    } else {
+        println!("Search string not found in target file.");
+    }
+
+    Ok(None)
+}
+
+pub fn insert(
+    target_file: &str,
+    text: &str,
+    search_string: &str,
+) -> io::Result<()> {
+    // Read the contents of the target file
+    let mut target_contents = String::new();
+    fs::File::open(&target_file)?.read_to_string(&mut target_contents)?;
+
+    // Find the position of the search string in the target file
+    if let Some(pos) = target_contents.find(search_string) {
+        // Split the target contents into two parts
+        let (before, after) = target_contents.split_at(pos + search_string.len());
+        
+        // Combine the parts with the insert contents
+        let new_contents = format!("{}{}{}", before, text, after);
+        
+        // Write the new contents back to the target file
+        let mut file = fs::File::create(&target_file)?;
+        file.write_all(new_contents.as_bytes())?;
+    } else {
+        println!("Search string not found in target file.");
+    }
 
     Ok(())
 }
