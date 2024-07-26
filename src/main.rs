@@ -3,10 +3,10 @@ use clap::{Args, Parser, Subcommand};
 use log::info;
 use std::io;
 use std::path::PathBuf;
-use zkRust::risc0;
-use zkRust::sp1;
-use zkRust::submit_proof_to_aligned;
-use zkRust::utils;
+use zk_rust::risc0;
+use zk_rust::sp1;
+use zk_rust::submit_proof_to_aligned;
+use zk_rust::utils;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -20,8 +20,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Adds files to myapp
+    #[clap(about = "Generate a proof of execution of a program using SP1")]
     ProveSp1(ProofArgs),
+    #[clap(about = "Generate a proof of execution of a program using RISC0")]
     ProveRisc0(ProofArgs),
 }
 
