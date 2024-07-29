@@ -18,9 +18,9 @@ RELEASE_URL="https://github.com/yetanotherco/zkRust/releases/download/$CURRENT_T
 ARCH=$(uname -m)
 
 if [ "$ARCH" == "x86_64" ]; then
-    FILE="zkRust"
+    FILE="zkRust-x86"
 elif [ "$ARCH" == "arm64" ]; then
-    FILE="zkRust"
+    FILE="zkRust-arm64"
 else
     echo "Unsupported architecture: $ARCH"
     exit 1
