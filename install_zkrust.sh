@@ -71,4 +71,18 @@ fi
 
 echo "zkRust installed successfully in $ZKRUST_BIN_PATH."
 echo "Detected your preferred shell is $PREF_SHELL and added aligned to PATH."
+echo "Installing zkVM toolchains"
+
+# Install risc0 toolchain
+curl -L https://risczero.com/install | bash
+rzup
+cargo risczero --version
+echo "Risc0 Toolchain Installed"
+
+# Install sp1 toolchain
+curl -L https://sp1.succinct.xyz | bash
+sp1up
+cargo prove --version
+echo "Sp1 Toolchain Installed"
+
 echo "Run 'source $PROFILE' or start a new terminal session to use aligned."

@@ -9,6 +9,11 @@ zkRust supports generating proofs for executable scripts. Specifically, zkRust s
 First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains from [risc0](https://github.com/risc0/risc0) and [sp1](https://github.com/succinctlabs/sp1) by running:
 
 ```sh
+make install
+```
+
+zkRust can then be installed directly by downloading the latest release binaries.
+```sh
 curl -L https://raw.githubusercontent.com/yetanotherco/zkRust/main/install_zkrust.sh | bash
 ```
 
