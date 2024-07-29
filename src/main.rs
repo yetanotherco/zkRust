@@ -3,10 +3,10 @@ use clap::{Args, Parser, Subcommand};
 use log::info;
 use std::io;
 use std::path::PathBuf;
-use zk_rust::risc0;
-use zk_rust::sp1;
-use zk_rust::submit_proof_to_aligned;
-use zk_rust::utils;
+use zkRust::risc0;
+use zkRust::sp1;
+use zkRust::submit_proof_to_aligned;
+use zkRust::utils;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
