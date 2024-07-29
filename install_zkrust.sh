@@ -5,9 +5,9 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "Installing zkRust..."
 
 BASE_DIR=$HOME
-ZKRUST_DIR="${ZKRUST_DIR-"$BASE_DIR/.zk_rust"}"
+ZKRUST_DIR="${ZKRUST_DIR-"$BASE_DIR/.zkRust"}"
 ZKRUST_BIN_DIR="$ZKRUST_DIR/bin"
-ZKRUST_BIN_PATH="$ZKRUST_BIN_DIR/zk_rust"
+ZKRUST_BIN_PATH="$ZKRUST_BIN_DIR/zkRust"
 CURRENT_TAG=$(curl -s -L \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -18,9 +18,9 @@ RELEASE_URL="https://github.com/yetanotherco/zkRust/releases/download/$CURRENT_T
 ARCH=$(uname -m)
 
 if [ "$ARCH" == "x86_64" ]; then
-    FILE="zk_rust"
+    FILE="zkRust"
 elif [ "$ARCH" == "arm64" ]; then
-    FILE="zk_rust"
+    FILE="zkRust"
 else
     echo "Unsupported architecture: $ARCH"
     exit 1
