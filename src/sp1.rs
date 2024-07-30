@@ -38,7 +38,6 @@ pub fn prepare_sp1_program() -> io::Result<()> {
 }
 
 pub fn prepare_guest_io() -> io::Result<()> {
-
     // replace zkRust::read()
     utils::replace(SP1_GUEST_MAIN, utils::IO_READ, SP1_IO_READ)?;
 

@@ -32,7 +32,7 @@ struct ProofArgs {
     #[clap(long)]
     submit_to_aligned_with_keystore: Option<PathBuf>,
     #[clap(long)]
-    io: bool
+    io: bool,
 }
 
 fn main() -> io::Result<()> {
@@ -92,7 +92,7 @@ fn main() -> io::Result<()> {
 
             /*
              Two ways one with and one without.... in without case would need to remove the thing.
-             we should have the developer declare the type in the following syntax 
+             we should have the developer declare the type in the following syntax
                 let n: T = zkrust::read();
             TODO:
                 need to grab variable name via regex

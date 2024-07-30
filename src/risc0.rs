@@ -62,7 +62,6 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     // Insert output body
     utils::insert(RISC0_HOST_MAIN, &output, utils::HOST_OUTPUT)?;
 
-
     // Extract Variable names from host and add them to the ExecutorEnv::builder()
     let values = utils::extract_values(RISC0_HOST_MAIN, utils::IO_WRITE)?;
 
@@ -74,7 +73,11 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     new_builder.push_str(".build().unwrap();");
 
     // Replace environment builder in host with new one
-    utils::replace(RISC0_HOST_MAIN, "let env = ExecutorEnv::builder().build().unwrap();", &new_builder)?;
+    utils::replace(
+        RISC0_HOST_MAIN,
+        "let env = ExecutorEnv::builder().build().unwrap();",
+        &new_builder,
+    )?;
 
     //Delete lines that contain zkRust::write(;
     utils::remove_lines(RISC0_HOST_MAIN, "zkRust::write(")?;
