@@ -4,7 +4,9 @@ target
 .tmp_guest/*
 
 workspaces/risc0/target
+workspaces/risc0/host/src/*
 workspaces/risc0/methods/guest/*
+
 workspaces/sp1/program/*
 
 proof_data/sp1/*
