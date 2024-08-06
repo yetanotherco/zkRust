@@ -1,4 +1,3 @@
-use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -111,8 +110,8 @@ pub fn submit_proof_to_aligned(
         .expect("Failed to decrypt keystore")
         .with_chain_id(17000u64);
 
-    let proof = fs::read(proof_path).expect("failed to serialize proof");
-    let elf_data = fs::read(elf_path).expect("failed to serialize elf");
+    let proof = std::fs::read(proof_path).expect("failed to serialize proof");
+    let elf_data = std::fs::read(elf_path).expect("failed to serialize elf");
 
     let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
 

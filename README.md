@@ -12,6 +12,11 @@ First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on 
 make install
 ```
 
+zkRust can then be installed directly by downloading the latest release binaries.
+```sh
+curl -L https://raw.githubusercontent.com/yetanotherco/zkRust/main/install_zkrust.sh | bash
+```
+
 ## Quickstart
 
 You can test zkRust for any of the examples in the `examples` folder. This include:
