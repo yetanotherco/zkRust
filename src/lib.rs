@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use aligned_sdk::core::types::{AlignedVerificationData, Chain, ProvingSystemId, VerificationData};
-use aligned_sdk::sdk::{submit, verify_proof_onchain};
+use aligned_sdk::sdk::{get_next_nonce, submit, verify_proof_onchain};
 use dialoguer::Confirm;
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
@@ -23,8 +23,9 @@ pub async fn submit_proof_and_wait_for_verification(
     verification_data: VerificationData,
     wallet: Wallet<SigningKey>,
     rpc_url: String,
+    nonce: U256,
 ) -> anyhow::Result<AlignedVerificationData> {
-    let res = submit(BATCHER_URL, &verification_data, wallet)
+    let res = submit(BATCHER_URL, &verification_data, wallet, nonce)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to submit proof for verification: {:?}", e))?;
 
@@ -138,6 +139,14 @@ pub fn submit_proof_to_aligned(
         pub_input,
     };
 
+    let nonce = runtime
+        .block_on(get_next_nonce(
+            rpc_url,
+            wallet.address(),
+            BATCHER_PAYMENTS_ADDRESS,
+        ))
+        .expect("could not get nonce");
+
     println!("Submitting proof to aligned for verification");
 
     runtime
@@ -145,6 +154,7 @@ pub fn submit_proof_to_aligned(
             verification_data,
             wallet,
             rpc_url.to_string(),
+            nonce,
         ))
         .expect("failed to submit proof");
     Ok(())
