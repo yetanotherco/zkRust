@@ -1,4 +1,4 @@
-use aligned_sdk::types::ProvingSystemId;
+use aligned_sdk::core::types::ProvingSystemId;
 use clap::{Args, Parser, Subcommand};
 use log::info;
 use std::io;
@@ -61,6 +61,7 @@ fn main() -> io::Result<()> {
                     keystore_path,
                     sp1::SP1_PROOF_PATH,
                     sp1::SP1_ELF_PATH,
+                    None,
                     ProvingSystemId::SP1,
                 )
                 .unwrap();
@@ -89,8 +90,9 @@ fn main() -> io::Result<()> {
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
                 submit_proof_to_aligned(
                     keystore_path,
-                    risc0::RISC0_PROOF_PATH,
-                    risc0::RISC0_IMAGE_PATH,
+                    risc0::PROOF_FILE_PATH,
+                    risc0::IMAGE_ID_FILE_PATH,
+                    Some(risc0::PUBLIC_INPUT_FILE_PATH),
                     ProvingSystemId::Risc0,
                 )
                 .unwrap();
