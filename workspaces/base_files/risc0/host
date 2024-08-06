@@ -13,6 +13,8 @@ fn main() {
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .init();
 
+    // INPUT //
+
     let env = ExecutorEnv::builder().build().unwrap();
 
     // Obtain the default prover.
@@ -24,6 +26,8 @@ fn main() {
     let verification_result = receipt.verify(METHOD_ID).is_ok();
 
     println!("Verification result: {}", verification_result);
+
+    // OUTPUT //
 
     let serialized = bincode::serialize(&receipt).unwrap();
 
