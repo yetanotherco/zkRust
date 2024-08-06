@@ -8,7 +8,9 @@ workspaces/risc0/methods/guest/*
 workspaces/sp1/program/*
 
 proof_data/sp1/*
+!proof_data/sp1/.gitkeep
 proof_data/risc0/*
+!proof_data/risc0/.gitkeep
 
 .DS_Store
 **/.DS_Store
