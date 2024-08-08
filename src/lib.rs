@@ -14,6 +14,7 @@ use ethers::types::Address;
 
 pub mod risc0;
 pub mod sp1;
+pub mod jolt;
 pub mod utils;
 
 const BATCHER_URL: &str = "wss://batcher.alignedlayer.com";
