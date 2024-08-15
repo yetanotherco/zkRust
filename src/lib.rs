@@ -45,6 +45,7 @@ pub async fn submit_proof_and_wait_for_verification(
                 .await
                 .is_ok_and(|r| r)
                 {
+                    println!("Proof verified in Aligned!");
                     return Ok(aligned_verification_data);
                 }
 

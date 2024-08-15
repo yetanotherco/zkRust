@@ -13,7 +13,7 @@ hex = "0.4.3"
 tokio = "1.38.0"
 
 # Sp1
-sp1-sdk = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.0.8-testnet" }
+sp1-sdk = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.0.1" }
 
 # Risc 0
 risc0-zkvm = { git = "https://github.com/risc0/risc0.git", tag = "v1.0.1" }

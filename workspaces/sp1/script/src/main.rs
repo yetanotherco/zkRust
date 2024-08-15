@@ -17,14 +17,15 @@ fn main() {
 
     let client = ProverClient::new();
     let (pk, vk) = client.setup(METHOD_ELF);
+
     let proof = client
-        .prove_compressed(&pk, stdin)
-        .expect("failed to generate proof");
+        .prove(&pk, stdin)
+        .compressed()
+        .run()
+        .expect("Could not generate proof");
 
     // Verify the proof.
-    client
-        .verify_compressed(&proof, &vk)
-        .expect("failed to verify proof");
+    client.verify(&proof, &vk).expect("failed to verify proof");
 
     // Save proof.
     let proof_data = bincode::serialize(&proof).expect("failed to serialize proof");
