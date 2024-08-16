@@ -3,14 +3,17 @@ use std::{fs, io, process::Command};
 use crate::utils;
 
 /// RISC0 workspace directories
-pub const RISC0_PROOF_PATH: &str = "./risc_zero.proof";
-pub const RISC0_IMAGE_PATH: &str = "./risc_zero_image_id.bin";
 pub const RISC0_WORKSPACE_DIR: &str = "./workspaces/risc0/";
 pub const RISC0_GUEST_DIR: &str = "./workspaces/risc0/methods/guest/";
 pub const RISC0_SRC_DIR: &str = "./workspaces/risc0/methods/guest/src";
 pub const RISC0_GUEST_MAIN: &str = "./workspaces/risc0/methods/guest/src/main.rs";
 pub const RISC0_BASE_CARGO_TOML: &str = "./workspaces/base_files/risc0";
 pub const RISC0_GUEST_CARGO_TOML: &str = "./workspaces/risc0/methods/guest/Cargo.toml";
+
+// Proof data generation paths
+pub const PROOF_FILE_PATH: &str = "./proof_data/risc0/risc0.proof";
+pub const IMAGE_ID_FILE_PATH: &str = "./proof_data/risc0/risc0.imageid";
+pub const PUBLIC_INPUT_FILE_PATH: &str = "./proof_data/risc0/risc0_pub_input.pub";
 
 /// RISC0 header added to programs for generating proofs of their execution
 pub const RISC0_GUEST_PROGRAM_HEADER_STD: &str =
