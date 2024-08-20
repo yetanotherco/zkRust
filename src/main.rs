@@ -55,7 +55,7 @@ fn main() -> io::Result<()> {
 
             sp1::prepare_sp1_program()?;
 
-            if args.acceleration {
+            if args.precompiles {
                 utils::insert(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "[workspace]").unwrap();
             }
 
@@ -93,7 +93,7 @@ fn main() -> io::Result<()> {
 
             risc0::prepare_risc0_guest()?;
 
-            if args.acceleration {
+            if args.precompiles {
                 utils::insert(risc0::RISC0_GUEST_CARGO_TOML, risc0::RISC0_ACCELERATION_IMPORT, "[workspace]").unwrap();
             }
             risc0::generate_risc0_proof()?;
