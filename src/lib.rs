@@ -113,10 +113,10 @@ pub fn submit_proof_to_aligned(
         .expect("Failed to decrypt keystore")
         .with_chain_id(17000u64);
 
-    let proof = fs::read(proof_path).expect("failed to read proof");
-    let elf_data = fs::read(elf_path).expect("failed to read ELF");
+    let proof = std::fs::read(proof_path).expect("failed to read proof");
+    let elf_data = std::fs::read(elf_path).expect("failed to read ELF");
     let pub_input = pub_input_path
-        .map(|pub_input_path| fs::read(pub_input_path).expect("failed to read public input"));
+        .map(|pub_input_path| std::fs::read(pub_input_path).expect("failed to read public input"));
 
     let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
 

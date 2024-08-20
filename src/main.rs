@@ -34,6 +34,8 @@ struct ProofArgs {
     submit_to_aligned_with_keystore: Option<PathBuf>,
     #[clap(long)]
     std: bool,
+    #[clap(long)]
+    precompiles: bool,
 }
 
 fn main() -> io::Result<()> {
@@ -52,9 +54,16 @@ fn main() -> io::Result<()> {
             )?;
 
             sp1::prepare_sp1_program()?;
+
+            if args.acceleration {
+                utils::insert(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "[workspace]").unwrap();
+            }
+
             sp1::generate_sp1_proof()?;
 
             info!("sp1 proof and ELF generated");
+
+            utils::replace(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "").unwrap();
 
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
@@ -83,9 +92,15 @@ fn main() -> io::Result<()> {
             )?;
 
             risc0::prepare_risc0_guest()?;
+
+            if args.acceleration {
+                utils::insert(risc0::RISC0_GUEST_CARGO_TOML, risc0::RISC0_ACCELERATION_IMPORT, "[workspace]").unwrap();
+            }
             risc0::generate_risc0_proof()?;
 
             info!("risc0 proof and image ID generated");
+
+            utils::replace(risc0::RISC0_GUEST_CARGO_TOML, risc0::RISC0_ACCELERATION_IMPORT, "").unwrap();
 
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {

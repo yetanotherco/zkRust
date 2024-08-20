@@ -19,6 +19,9 @@ pub const PUBLIC_INPUT_FILE_PATH: &str = "./proof_data/risc0/risc0_pub_input.pub
 pub const RISC0_GUEST_PROGRAM_HEADER_STD: &str =
     "#![no_main]\n\nrisc0_zkvm::guest::entry!(main);\n";
 
+/// RISC0 Cargo patch for accelerated SHA-256, K256, and bigint-multiplication circuits
+pub const RISC0_ACCELERATION_IMPORT: &str = "\n[patch.crates-io]\nsha2 = { git = \"https://github.com/risc0/RustCrypto-hashes\", tag = \"sha2-v0.10.6-risczero.0\" }\nk256 = { git = \"https://github.com/risc0/RustCrypto-elliptic-curves\", tag = \"k256/v0.13.1-risczero.1\"  }\ncrypto-bigint = { git = \"https://github.com/risc0/RustCrypto-crypto-bigint\", tag = \"v0.5.2-risczero.0\" }";
+
 /// This function mainly adds this header to the guest in order for it to be proven by
 /// risc0:
 ///
