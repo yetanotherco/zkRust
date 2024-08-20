@@ -112,6 +112,22 @@ Finally, to generate and send your proof of your programs execution to aligned u
 cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYSTORE> <PROGRAM_DIRECTORY_PATH .
 ```
 
+### Flags
+
+- `--precompiles`: Enables in acceleration via precompiles for supported zkVM's. Specifying this flag allows for VM specific speedups for specific expensive operations such as SHA256, SHA3, bigint multiplication, and ed25519 signature verification. By specifying this flag proving operations for specific operations within the following rust crates are accelerated:
+    - SP1:
+        - `sha2`
+        - `sha3`
+        - `crypto-bigint`
+        - `tiny-keccak`
+        - `ed25519-consensus`
+        - `ecdsa-core`
+        - `secp256k1`
+    - Risc0:
+        - `sha2`
+        - `k256`
+        - `crypto-bigint`
+
 ## Limitations:
 Currently zkRust does not support fully support the following:
 
