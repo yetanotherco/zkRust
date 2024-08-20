@@ -2,12 +2,12 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-echo "Installing Aligned..."
+echo "Installing zkRust..."
 
 BASE_DIR=$HOME
-ZKRUST_DIR="${ZKRUST_DIR-"$BASE_DIR/.zk_rust"}"
+ZKRUST_DIR="${ZKRUST_DIR-"$BASE_DIR/.zkRust"}"
 ZKRUST_BIN_DIR="$ZKRUST_DIR/bin"
-ZKRUST_BIN_PATH="$ZKRUST_BIN_DIR/zk_rust"
+ZKRUST_BIN_PATH="$ZKRUST_BIN_DIR/zkRust"
 CURRENT_TAG=$(curl -s -L \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -18,9 +18,9 @@ RELEASE_URL="https://github.com/yetanotherco/zkRust/releases/download/$CURRENT_T
 ARCH=$(uname -m)
 
 if [ "$ARCH" == "x86_64" ]; then
-    FILE="zk_rust-x86"
+    FILE="zkRust-x86"
 elif [ "$ARCH" == "arm64" ]; then
-    FILE="zk_rust-arm64"
+    FILE="zkRust-arm64"
 else
     echo "Unsupported architecture: $ARCH"
     exit 1
@@ -28,7 +28,7 @@ fi
 
 mkdir -p "$ZKRUST_BIN_DIR"
 if curl -sSf -L "$RELEASE_URL$FILE" -o "$ZKRUST_BIN_PATH"; then
-    echo "Aligned download successful, installing..."
+    echo "zkRust downloaded successful, installing..."
 else
     echo "Error: Failed to download $RELEASE_URL$FILE"
     exit 1
@@ -69,6 +69,20 @@ if [[ ":$PATH:" != *":${ZKRUST_BIN_DIR}:"* ]]; then
     fi
 fi
 
-echo "Aligned installed successfully in $ZKRUST_BIN_PATH."
+echo "zkRust installed successfully in $ZKRUST_BIN_PATH."
 echo "Detected your preferred shell is $PREF_SHELL and added aligned to PATH."
+echo "Installing zkVM toolchains"
+
+# Install risc0 toolchain
+curl -L https://risczero.com/install | bash
+rzup
+cargo risczero --version
+echo "Risc0 Toolchain Installed"
+
+# Install sp1 toolchain
+curl -L https://sp1.succinct.xyz | bash
+sp1up
+cargo prove --version
+echo "Sp1 Toolchain Installed"
+
 echo "Run 'source $PROFILE' or start a new terminal session to use aligned."

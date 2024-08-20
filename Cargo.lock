@@ -7052,7 +7052,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zk_rust"
+name = "zkRust"
 version = "0.1.0"
 dependencies = [
  "aligned-sdk",
