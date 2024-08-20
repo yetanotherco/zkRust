@@ -1,5 +1,5 @@
 [package]
-name = "zkRust"
+name = "zk_rust"
 version = "0.1.0"
 edition = "2021"
 

@@ -3,10 +3,10 @@ use clap::{Args, Parser, Subcommand};
 use log::info;
 use std::io;
 use std::path::PathBuf;
-use zkRust::risc0;
-use zkRust::sp1;
-use zkRust::submit_proof_to_aligned;
-use zkRust::utils;
+use zk_rust::risc0;
+use zk_rust::sp1;
+use zk_rust::submit_proof_to_aligned;
+use zk_rust::utils;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -20,8 +20,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Adds files to myapp
+    #[clap(about = "Generate a proof of execution of a program using SP1")]
     ProveSp1(ProofArgs),
+    #[clap(about = "Generate a proof of execution of a program using RISC0")]
     ProveRisc0(ProofArgs),
 }
 
@@ -33,6 +34,8 @@ struct ProofArgs {
     submit_to_aligned_with_keystore: Option<PathBuf>,
     #[clap(long)]
     std: bool,
+    #[clap(long)]
+    precompiles: bool,
 }
 
 fn main() -> io::Result<()> {
@@ -51,9 +54,16 @@ fn main() -> io::Result<()> {
             )?;
 
             sp1::prepare_sp1_program()?;
+
+            if args.precompiles {
+                utils::insert(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "[workspace]").unwrap();
+            }
+
             sp1::generate_sp1_proof()?;
 
             info!("sp1 proof and ELF generated");
+
+            utils::replace(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "").unwrap();
 
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
@@ -82,9 +92,15 @@ fn main() -> io::Result<()> {
             )?;
 
             risc0::prepare_risc0_guest()?;
+
+            if args.precompiles {
+                utils::insert(risc0::RISC0_GUEST_CARGO_TOML, risc0::RISC0_ACCELERATION_IMPORT, "[workspace]").unwrap();
+            }
             risc0::generate_risc0_proof()?;
 
             info!("risc0 proof and image ID generated");
+
+            utils::replace(risc0::RISC0_GUEST_CARGO_TOML, risc0::RISC0_ACCELERATION_IMPORT, "").unwrap();
 
             // Submit to aligned
             if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {

@@ -23,6 +23,21 @@ pub fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()>
     Ok(())
 }
 
+pub fn replace(file_path: &str, search_string: &str, replace_string: &str) -> io::Result<()> {
+    // Read the contents of the file
+    let mut contents = String::new();
+    fs::File::open(file_path)?.read_to_string(&mut contents)?;
+
+    // Replace all occurrences of the search string with the replace string
+    let new_contents = contents.replace(search_string, replace_string);
+
+    // Write the new contents back to the file
+    let mut file = fs::File::create(&file_path)?;
+    file.write_all(new_contents.as_bytes())?;
+
+    Ok(())
+}
+
 fn copy_dir_all(src: &impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
     fs::create_dir_all(&dst)?;
     for entry in fs::read_dir(src)? {
@@ -34,6 +49,29 @@ fn copy_dir_all(src: &impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()>
             fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
         }
     }
+    Ok(())
+}
+
+pub fn insert(target_file: &str, text: &str, search_string: &str) -> io::Result<()> {
+    // Read the contents of the target file
+    let mut target_contents = String::new();
+    fs::File::open(&target_file)?.read_to_string(&mut target_contents)?;
+
+    // Find the position of the search string in the target file
+    if let Some(pos) = target_contents.find(search_string) {
+        // Split the target contents into two parts
+        let (before, after) = target_contents.split_at(pos + search_string.len());
+
+        // Combine the parts with the insert contents
+        let new_contents = format!("{}{}{}", before, text, after);
+
+        // Write the new contents back to the target file
+        let mut file = fs::File::create(&target_file)?;
+        file.write_all(new_contents.as_bytes())?;
+    } else {
+        println!("Search string not found in target file.");
+    }
+
     Ok(())
 }
 
