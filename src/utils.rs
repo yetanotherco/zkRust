@@ -120,12 +120,12 @@ pub fn prepare_workspace(
 }
 
 // Host
-pub const IO_WRITE: &str = "io::write";
-pub const IO_OUT: &str = "io::out();";
+pub const IO_WRITE: &str = "zk_rust_io::write";
+pub const IO_OUT: &str = "zk_rust_io::out();";
 
 // Guest
-pub const IO_READ: &str = "io::read();";
-pub const IO_COMMIT: &str = "io::commit";
+pub const IO_READ: &str = "zk_rust_io::read();";
+pub const IO_COMMIT: &str = "zk_rust_io::commit";
 
 pub const OUTPUT_FUNC: &str = r"pub fn output() {";
 pub const INPUT_FUNC: &str = r"pub fn input() {";
@@ -177,6 +177,8 @@ pub fn extract(
     Ok(None)
 }
 
+// TODO: Abstract Regex
+//let regex = regex::new(&format!(r"{}[(](.*?)[)]", regex::escape(search_text))).unwrap();
 pub fn extract_values(file_path: &str, search_text: &str) -> io::Result<Vec<String>> {
     let file = fs::File::open(file_path)?;
     let reader = io::BufReader::new(file);

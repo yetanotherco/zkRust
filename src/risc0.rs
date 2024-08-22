@@ -58,6 +58,7 @@ pub fn prepare_guest_io() -> io::Result<()> {
 }
 
 pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
+    //TODO: remove output & input functions after copying
     let input_path = format!("{}/src/input.rs", guest_path);
     let input = utils::extract(&input_path, utils::INPUT_FUNC, 2)?.unwrap();
     // Extract output body

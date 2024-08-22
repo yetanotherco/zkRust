@@ -15,6 +15,8 @@ fn main() {
 
     // INPUT //
 
+    let env = ExecutorEnv::builder().build().unwrap();
+
     // Obtain the default prover.
     let prover = default_prover();
 

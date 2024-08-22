@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 regex = "1.10.3"
-zkRust = { git = "https://github.com/yetanotherco/zkRust.git", branch = "io" }
+zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", branch = "io" }
