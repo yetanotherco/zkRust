@@ -13,13 +13,13 @@ fn main() {
     sp1_sdk::utils::setup_logger();
 
     // Setup the inputs.
-    let stdin = SP1Stdin::new();
+    let mut stdin = SP1Stdin::new();
 
     // INPUT //
 
     let client = ProverClient::new();
     let (pk, vk) = client.setup(METHOD_ELF);
-    let proof = client
+    let mut proof = client
         .prove(&pk, stdin)
         .compressed()
         .run()

@@ -83,8 +83,9 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     // Replace environment builder in host with new one
     utils::replace(RISC0_HOST_MAIN, "let env = ExecutorEnv::builder().build().unwrap();", &new_builder)?;
 
+    //TODO: FRAGILE!
     //Delete lines that contain zkRust::write(;
-    utils::remove_lines(RISC0_HOST_MAIN, "zkRust::write(")?;
+    utils::remove_lines(RISC0_HOST_MAIN, "zk_rust_io::write(")?;
 
     // replace zkRust::out()
     utils::replace(RISC0_HOST_MAIN, utils::IO_OUT, RISC0_IO_OUT)?;

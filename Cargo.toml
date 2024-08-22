@@ -5,9 +5,6 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[workspace]
-members = ["zk_rust_io"]
-
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
 regex = "1.10.5"

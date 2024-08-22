@@ -1,4 +1,4 @@
-use zkRust::io;
+use zk_rust_io;
 
 pub fn output() {
     // Read the output.

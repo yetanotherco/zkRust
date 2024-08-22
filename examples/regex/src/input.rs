@@ -1,4 +1,4 @@
-use zk_rust_io::io;
+use zk_rust_io;
 
 pub fn input() {
     let pattern = "a+".to_string();
