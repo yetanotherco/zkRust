@@ -33,7 +33,7 @@ struct ProofArgs {
     #[clap(long)]
     submit_to_aligned_with_keystore: Option<PathBuf>,
     #[clap(long)]
-    io: bool
+    io: bool,
     #[clap(long)]
     precompiles: bool,
 }
@@ -101,16 +101,6 @@ fn main() -> io::Result<()> {
             )?;
             std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
 
-            /*
-             Two ways one with and one without.... in without case would need to remove the thing.
-             we should have the developer declare the type in the following syntax 
-                let n: T = zkrust::read();
-            TODO:
-                need to grab variable name via regex
-                need to write that name into host with correct extensions
-             Type in zkrust::write() needs to be serializable
-             Idea what if we wrapped the serialization methods????
-            */
             risc0::prepare_risc0_guest()?;
             if args.io {
                 risc0::prepare_guest_io()?;

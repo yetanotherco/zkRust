@@ -14,12 +14,6 @@ fn main() {
         .init();
 
     // INPUT //
-    let pattern = "a+".to_string();
-    let target_string = "an era of truth, not trust".to_string();
-
-    // Write in a simple regex pattern.
-
-    let env = ExecutorEnv::builder().write(&pattern).unwrap().write(&target_string).unwrap().build().unwrap();
 
     // Obtain the default prover.
     let prover = default_prover();
@@ -32,9 +26,6 @@ fn main() {
     println!("Verification result: {}", verification_result);
 
     // OUTPUT //
-    // Read the output.
-    let res: bool = receipt.journal.decode().unwrap();
-    println!("res: {}", res);
 
     let serialized = bincode::serialize(&receipt).unwrap();
 
