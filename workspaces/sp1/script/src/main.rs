@@ -13,18 +13,22 @@ fn main() {
     sp1_sdk::utils::setup_logger();
 
     // Setup the inputs.
-    let mut stdin = SP1Stdin::new();
+    let stdin = SP1Stdin::new();
 
     // INPUT //
 
     let client = ProverClient::new();
     let (pk, vk) = client.setup(METHOD_ELF);
     let proof = client
-        .prove_compressed(&pk, stdin)
+        .prove(&pk, stdin)
+        .compressed()
+        .run()
         .expect("failed to generate proof");
 
     // Verify the proof.
-    client.verify(&proof, &vk).expect("failed to verify proof");
+    client
+        .verify(&proof, &vk)
+        .expect("failed to verify proof");
 
     // OUTPUT //
 
