@@ -120,12 +120,12 @@ pub fn prepare_workspace(
 }
 
 // Host
-pub const IO_WRITE: &str = "zkRust::write";
-pub const IO_OUT: &str = "zkRust::out();";
+pub const IO_WRITE: &str = "io::write";
+pub const IO_OUT: &str = "io::out();";
 
 // Guest
-pub const IO_READ: &str = "zkRust::read();";
-pub const IO_COMMIT: &str = "zkRust::commit";
+pub const IO_READ: &str = "io::read();";
+pub const IO_COMMIT: &str = "io::commit";
 
 pub const OUTPUT_FUNC: &str = r"pub fn output() {";
 pub const INPUT_FUNC: &str = r"pub fn input() {";
