@@ -122,7 +122,6 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
         - `tiny-keccak v2.0.2`
         - `ed25519-consensus v2.1.0`
         - `ecdsa-core v0.16.9`
-        - `secp256k1 v0.29.0`
     - Risc0:
         - `sha2 v0.10.6`
         - `k256 v0.13.1`
