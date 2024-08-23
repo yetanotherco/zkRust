@@ -9,4 +9,4 @@ edition = "2021"
 digest = "0.10.7"
 rand = "0.8.5"
 rsa = "0.6.0"                                      # Check for the latest version
-sha2 = "0.10.8" 
+sha2 = "0.10.6" 
