@@ -1,4 +1,5 @@
-use std::{fs, io, process::Command};
+use std::{fs, io, path::PathBuf, process::Command};
+use clap::Args;
 
 use crate::utils;
 
@@ -22,6 +23,22 @@ pub const RISC0_GUEST_PROGRAM_HEADER_STD: &str =
 /// RISC0 Cargo patch for accelerated SHA-256, K256, and bigint-multiplication circuits
 pub const RISC0_ACCELERATION_IMPORT: &str = "\n[patch.crates-io]\nsha2 = { git = \"https://github.com/risc0/RustCrypto-hashes\", tag = \"sha2-v0.10.6-risczero.0\" }\nk256 = { git = \"https://github.com/risc0/RustCrypto-elliptic-curves\", tag = \"k256/v0.13.1-risczero.1\"  }\ncrypto-bigint = { git = \"https://github.com/risc0/RustCrypto-crypto-bigint\", tag = \"v0.5.2-risczero.0\" }";
 
+#[derive(Args, Debug)]
+pub struct Risc0Args {
+    pub guest_path: String,
+    pub output_proof_path: String,
+    #[clap(long)]
+    pub submit_to_aligned_with_keystore: Option<PathBuf>,
+    #[clap(long)]
+    pub std: bool,
+    #[clap(long)]
+    pub precompiles: bool,
+    #[clap(long)]
+    pub cuda: bool,
+    #[clap(long)]
+    pub metal: bool,
+}
+
 /// This function mainly adds this header to the guest in order for it to be proven by
 /// risc0:
 ///
@@ -34,15 +51,36 @@ pub fn prepare_risc0_guest() -> io::Result<()> {
 }
 
 /// Generates RISC0 proof and image ID
-pub fn generate_risc0_proof() -> io::Result<()> {
+pub fn generate_risc0_proof(args: &Risc0Args) -> io::Result<()> {
     let guest_path = fs::canonicalize(RISC0_WORKSPACE_DIR)?;
 
-    Command::new("cargo")
-        .arg("run")
-        .arg("--release")
-        .current_dir(guest_path)
-        .status()
-        .unwrap();
+    if args.cuda {
+        Command::new("cargo")
+            .arg("run")
+            .arg("--release")
+            .arg("-F")
+            .arg("cuda")
+            .current_dir(guest_path)
+            .status()
+            .unwrap();
+
+    } else if args.metal {
+        Command::new("cargo")
+            .arg("run")
+            .arg("--release")
+            .arg("-F")
+            .arg("metal")
+            .current_dir(guest_path)
+            .status()
+            .unwrap();
+    } else {
+        Command::new("cargo")
+            .arg("run")
+            .arg("--release")
+            .current_dir(guest_path)
+            .status()
+            .unwrap();
+    }
 
     Ok(())
 }

@@ -9,4 +9,6 @@ edition = "2021"
 risc0-zkvm = { git = "https://github.com/risc0/risc0", features = [
     "std",
     "getrandom",
+    "metal",
+    "cuda"
 ], tag = "v1.0.1" }

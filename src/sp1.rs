@@ -1,4 +1,5 @@
-use std::{fs, io, process::Command};
+use std::{fs, io, path::PathBuf, process::Command};
+use clap::Args;
 
 use crate::utils;
 
@@ -19,6 +20,18 @@ pub const SP1_PROGRAM_HEADER: &str = "#![no_main]\nsp1_zkvm::entrypoint!(main);\
 
 /// SP1 Cargo patch for accelerated SHA-256, K256, and bigint-multiplication circuits
 pub const SP1_ACCELERATION_IMPORT: &str = "\n[patch.crates-io]\nsha2-v0-10-8 = { git = \"https://github.com/sp1-patches/RustCrypto-hashes\", package = \"sha2\", branch = \"patch-sha2-v0.10.8\" }\nsha3-v0-10-8 = { git = \"https://github.com/sp1-patches/RustCrypto-hashes\", package = \"sha3\", branch = \"patch-sha3-v0.10.8\" }\ncrypto-bigint = { git = \"https://github.com/sp1-patches/RustCrypto-bigint\", branch = \"patch-v0.5.5\" }\ntiny-keccak = { git = \"https://github.com/sp1-patches/tiny-keccak\", branch = \"patch-v2.0.2\" }\ned25519-consensus = { git = \"https://github.com/sp1-patches/ed25519-consensus\", branch = \"patch-v2.1.0\" }\necdsa-core = { git = \"https://github.com/sp1-patches/signatures\", package = \"ecdsa\", branch = \"patch-ecdsa-v0.16.9\" }\n";
+
+#[derive(Args, Debug)]
+pub struct Sp1Args {
+    pub guest_path: String,
+    pub output_proof_path: String,
+    #[clap(long)]
+    pub submit_to_aligned_with_keystore: Option<PathBuf>,
+    #[clap(long)]
+    pub std: bool,
+    #[clap(long)]
+    pub precompiles: bool,
+}
 
 /// This function mainly adds this header to the guest in order for it to be proven by
 /// sp1:
