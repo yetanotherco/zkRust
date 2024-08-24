@@ -1,8 +1,7 @@
 use aligned_sdk::core::types::ProvingSystemId;
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use log::info;
 use std::io;
-use std::path::PathBuf;
 use zkRust::risc0;
 use zkRust::sp1;
 use zkRust::submit_proof_to_aligned;
@@ -21,21 +20,9 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     #[clap(about = "Generate a proof of execution of a program using SP1")]
-    ProveSp1(ProofArgs),
+    ProveSp1(sp1::Sp1Args),
     #[clap(about = "Generate a proof of execution of a program using RISC0")]
-    ProveRisc0(ProofArgs),
-}
-
-#[derive(Args, Debug)]
-struct ProofArgs {
-    guest_path: String,
-    output_proof_path: String,
-    #[clap(long)]
-    submit_to_aligned_with_keystore: Option<PathBuf>,
-    #[clap(long)]
-    std: bool,
-    #[clap(long)]
-    precompiles: bool,
+    ProveRisc0(risc0::Risc0Args),
 }
 
 fn main() -> io::Result<()> {
@@ -96,7 +83,7 @@ fn main() -> io::Result<()> {
             if args.precompiles {
                 utils::insert(risc0::RISC0_GUEST_CARGO_TOML, risc0::RISC0_ACCELERATION_IMPORT, "[workspace]").unwrap();
             }
-            risc0::generate_risc0_proof()?;
+            risc0::generate_risc0_proof(args)?;
 
             info!("risc0 proof and image ID generated");
 
