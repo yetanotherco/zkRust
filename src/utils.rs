@@ -4,6 +4,18 @@ use std::{
     path::Path,
 };
 
+pub fn add_before_substring(original_string: &str, substring: &str, text_to_add: &str) -> String {
+    if let Some(index) = original_string.find(substring) {
+        let mut modified_string = String::with_capacity(original_string.len() + text_to_add.len());
+        modified_string.push_str(&original_string[..index]);
+        modified_string.push_str(text_to_add);
+        modified_string.push_str(&original_string[index..]);
+        modified_string
+    } else {
+        original_string.to_string()
+    }
+}
+
 pub fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
     // Open the file in read mode to read its existing content
     let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;

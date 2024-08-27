@@ -12,6 +12,9 @@ anyhow = "1.0.86"
 hex = "0.4.3"
 tokio = "1.38.0"
 
+# Jolt
+jolt = { package = "jolt-sdk", git = "https://github.com/a16z/jolt", features = ["host"] }
+
 # Sp1
 sp1-sdk = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.0.1" }
 

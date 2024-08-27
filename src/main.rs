@@ -5,6 +5,7 @@ use std::io;
 use std::path::PathBuf;
 use zkRust::risc0;
 use zkRust::sp1;
+use zkRust::jolt;
 use zkRust::submit_proof_to_aligned;
 use zkRust::utils;
 
@@ -24,6 +25,7 @@ enum Commands {
     ProveSp1(ProofArgs),
     #[clap(about = "Generate a proof of execution of a program using RISC0")]
     ProveRisc0(ProofArgs),
+    ProveJolt(ProofArgs),
 }
 
 #[derive(Args, Debug)]
@@ -114,6 +116,37 @@ fn main() -> io::Result<()> {
                 .unwrap();
 
                 info!("risc0 proof submitted and verified on aligned");
+            }
+
+            Ok(())
+        }
+        Commands::ProveJolt(args) => {
+            println!("Proving with Jolt, program in: {}", args.guest_path);
+
+            utils::prepare_workspace(
+                &args.guest_path,
+                jolt::JOLT_SRC_DIR,
+                jolt::JOLT_GUEST_CARGO_TOML,
+                jolt::JOLT_BASE_CARGO_TOML,
+            )?;
+
+            jolt::prepare_jolt_guest()?;
+            jolt::generate_jolt_proof()?;
+
+            println!("Proof and Proof Image generated!");
+
+            // Submit to aligned
+            if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                submit_proof_to_aligned(
+                    keystore_path,
+                    jolt::JOLT_PROOF_PATH,
+                    jolt::JOLT_ELF_PATH,
+                    //TODO: Change this to Jolt when upstream change is made
+                    ProvingSystemId::Risc0,
+                )
+                .unwrap();
+
+                println!("Proof submitted and verified on aligned");
             }
 
             Ok(())

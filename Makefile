@@ -12,6 +12,12 @@ install_sp1:
 	@cargo prove --version
 	@echo "Sp1 Toolchain Installed"
 
+install_jolt:
+	@curl -L https://sp1.succinct.xyz | bash
+	@sp1up
+	@cargo prove --version
+	@echo "Jolt Toolchain Installed"
+
 # Default target
 all: instal
 
