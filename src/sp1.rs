@@ -1,4 +1,7 @@
-use std::{fs, io, process::Command};
+use std::{
+    fs, io,
+    process::{Command, ExitStatus},
+};
 
 use crate::utils;
 
@@ -43,7 +46,6 @@ pub fn prepare_sp1_program() -> io::Result<()> {
 }
 
 pub fn prepare_guest_io() -> io::Result<()> {
-
     // replace zkRust::read()
     utils::replace(SP1_GUEST_MAIN, utils::IO_READ, SP1_IO_READ)?;
 
@@ -54,16 +56,48 @@ pub fn prepare_guest_io() -> io::Result<()> {
 
 pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     //TODO: remove output & input functions after copying
-    // Extract input body
+    //TODO: only read file once
+
     let input_path = format!("{}/src/input.rs", guest_path);
-    let input = utils::extract(&input_path, utils::INPUT_FUNC, 1)?.unwrap();
+    let input_imports = utils::extract_imports(&input_path)?;
+    // let input = utils::extract_regex(&input_path, r"pub\sfn\sinput\(\)\s*\{([^}]*)\}")?.unwrap();
+    println!();
+    println!("input imports {:?}", input_imports);
+    println!();
+
+    // Extract input body
+    let input =
+        utils::extract_till_last_occurence(&input_path, r"pub fn input() ", "{", "}")?.unwrap();
+    // let input = utils::extract_regex(&input_path, r"pub\sfn\sinput\(\)\s*\{([^}]*)\}")?.unwrap();
+    println!();
+    println!("input body {:?}", input);
+    println!();
+
     // Extract output body
     let output_path = format!("{}/src/output.rs", guest_path);
-    let output = utils::extract(&output_path, utils::OUTPUT_FUNC, 1)?.unwrap();
+    let output_imports = utils::extract_imports(&output_path)?;
+    println!();
+    println!("output imports {:?}", output_imports);
+    println!();
+    let output =
+        utils::extract_till_last_occurence(&output_path, r"pub fn output() ", "{", "}")?.unwrap();
+    //let output = utils::extract_regex(&output_path, r"pub\sfn\soutput\(\)\s*\{([^}]*)\}")?.unwrap();
+
+    println!();
+    println!("output body {:?}", output);
+    println!();
+    //prepend imports
+    //prepend imports
+    utils::prepend_to_file(SP1_HOST_MAIN, &input_imports)?;
+    utils::prepend_to_file(SP1_HOST_MAIN, &output_imports)?;
+
     // Insert input body
     utils::insert(SP1_HOST_MAIN, &input, utils::HOST_INPUT)?;
     // Insert output body
     utils::insert(SP1_HOST_MAIN, &output, utils::HOST_OUTPUT)?;
+
+    //Remove imports of zk_rust_io
+
     // replace zkRust::write
     utils::replace(SP1_HOST_MAIN, utils::IO_WRITE, SP1_HOST_WRITE)?;
     // replace zkRust::out()
@@ -72,13 +106,11 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
 }
 
 /// Generates SP1 proof and ELF
-pub fn generate_sp1_proof() -> io::Result<()> {
+pub fn generate_sp1_proof() -> io::Result<ExitStatus> {
     let guest_path = fs::canonicalize(SP1_SCRIPT_DIR)?;
     Command::new("cargo")
         .arg("run")
         .arg("--release")
         .current_dir(guest_path)
-        .status()?;
-
-    Ok(())
+        .status()
 }

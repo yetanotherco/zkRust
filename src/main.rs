@@ -50,6 +50,7 @@ fn main() -> io::Result<()> {
                 &args.guest_path,
                 sp1::SP1_SRC_DIR,
                 sp1::SP1_GUEST_CARGO_TOML,
+                "./workspaces/sp1/script/src",
                 sp1::SP1_BASE_CARGO_TOML,
             )?;
             std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
@@ -61,30 +62,42 @@ fn main() -> io::Result<()> {
             }
 
             if args.precompiles {
-                utils::insert(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "[workspace]").unwrap();
-            }
-
-            sp1::generate_sp1_proof()?;
-
-            info!("sp1 proof and ELF generated");
-
-            utils::replace(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "").unwrap();
-
-            // Submit to aligned
-            if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
-                submit_proof_to_aligned(
-                    keystore_path,
-                    sp1::SP1_PROOF_PATH,
-                    sp1::SP1_ELF_PATH,
-                    None,
-                    ProvingSystemId::SP1,
+                utils::insert(
+                    sp1::SP1_GUEST_CARGO_TOML,
+                    sp1::SP1_ACCELERATION_IMPORT,
+                    "[workspace]",
                 )
                 .unwrap();
-                info!("sp1 proof submitted and verified on aligned");
             }
 
-            std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
+            if sp1::generate_sp1_proof()?.success() {
+                info!("sp1 proof and ELF generated");
 
+                utils::replace(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "")
+                    .unwrap();
+
+                // Submit to aligned
+                if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                    submit_proof_to_aligned(
+                        keystore_path,
+                        sp1::SP1_PROOF_PATH,
+                        sp1::SP1_ELF_PATH,
+                        None,
+                        ProvingSystemId::SP1,
+                    )
+                    .unwrap();
+                    info!("sp1 proof submitted and verified on aligned");
+                }
+
+                // Clear host & guest
+                std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
+
+                return Ok(());
+            }
+
+            info!("SP1 proof generation failed");
+            // Clear host
+            std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
             Ok(())
         }
 
@@ -97,6 +110,7 @@ fn main() -> io::Result<()> {
                 &args.guest_path,
                 risc0::RISC0_SRC_DIR,
                 risc0::RISC0_GUEST_CARGO_TOML,
+                "./workspaces/risc0/host/src",
                 risc0::RISC0_BASE_CARGO_TOML,
             )?;
             std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
@@ -108,31 +122,48 @@ fn main() -> io::Result<()> {
             }
 
             if args.precompiles {
-                utils::insert(risc0::RISC0_GUEST_CARGO_TOML, risc0::RISC0_ACCELERATION_IMPORT, "[workspace]").unwrap();
+                utils::insert(
+                    risc0::RISC0_GUEST_CARGO_TOML,
+                    risc0::RISC0_ACCELERATION_IMPORT,
+                    "[workspace]",
+                )
+                .unwrap();
             }
-            risc0::generate_risc0_proof()?;
 
-            info!("risc0 proof and image ID generated");
+            if risc0::generate_risc0_proof()?.success() {
+                info!("Risc0 proof and Image ID generated");
 
-            utils::replace(risc0::RISC0_GUEST_CARGO_TOML, risc0::RISC0_ACCELERATION_IMPORT, "").unwrap();
-
-            // Submit to aligned
-            if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
-                submit_proof_to_aligned(
-                    keystore_path,
-                    risc0::PROOF_FILE_PATH,
-                    risc0::IMAGE_ID_FILE_PATH,
-                    Some(risc0::PUBLIC_INPUT_FILE_PATH),
-                    ProvingSystemId::Risc0,
+                utils::replace(
+                    risc0::RISC0_GUEST_CARGO_TOML,
+                    risc0::RISC0_ACCELERATION_IMPORT,
+                    "",
                 )
                 .unwrap();
 
-                info!("risc0 proof submitted and verified on aligned");
+                // Submit to aligned
+                if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                    submit_proof_to_aligned(
+                        keystore_path,
+                        risc0::PROOF_FILE_PATH,
+                        risc0::IMAGE_ID_FILE_PATH,
+                        Some(risc0::PUBLIC_INPUT_FILE_PATH),
+                        ProvingSystemId::Risc0,
+                    )
+                    .unwrap();
+
+                    info!("risc0 proof submitted and verified on aligned");
+                }
+
+                // Clear Host file
+                std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
+
+                return Ok(());
             }
+
+            info!("Risc0 proof generation failed");
 
             // Clear Host file
             std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
-
             Ok(())
         }
     }

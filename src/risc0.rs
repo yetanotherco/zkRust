@@ -1,4 +1,7 @@
-use std::{fs, io, process::Command};
+use std::{
+    fs, io,
+    process::{Command, ExitStatus},
+};
 
 use crate::utils;
 
@@ -60,15 +63,37 @@ pub fn prepare_guest_io() -> io::Result<()> {
 pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     //TODO: remove output & input functions after copying
     let input_path = format!("{}/src/input.rs", guest_path);
-    let input = utils::extract(&input_path, utils::INPUT_FUNC, 2)?.unwrap();
+    let input_imports = utils::extract_imports(&input_path)?;
+    println!();
+    println!("input imports {:?}", input_imports);
+    println!();
+    //TODO: eliminate
+    let input =
+        utils::extract_till_last_occurence(&input_path, "pub fn input() ", "{", "}")?.unwrap();
     // Extract output body
+    println!();
+    println!("input body {:?}", input);
+    println!();
+
     let output_path = format!("{}/src/output.rs", guest_path);
-    let output = utils::extract(&output_path, utils::OUTPUT_FUNC, 2)?.unwrap();
+    let output_imports = utils::extract_imports(&output_path)?;
+    println!();
+    println!("output imports {:?}", output_imports);
+    println!();
+    //TODO: eliminate unwrap
+    let output =
+        utils::extract_till_last_occurence(&output_path, "pub fn output() ", "{", "}")?.unwrap();
+    println!();
+    println!("output body {:?}", output);
+    println!();
+
+    utils::prepend_to_file(RISC0_HOST_MAIN, &input_imports)?;
+    utils::prepend_to_file(RISC0_HOST_MAIN, &output_imports)?;
+
     // Insert input body
     utils::insert(RISC0_HOST_MAIN, &input, utils::HOST_INPUT)?;
     // Insert output body
     utils::insert(RISC0_HOST_MAIN, &output, utils::HOST_OUTPUT)?;
-
 
     // Extract Variable names from host and add them to the ExecutorEnv::builder()
     let values = utils::extract_values(RISC0_HOST_MAIN, utils::IO_WRITE)?;
@@ -81,7 +106,11 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     new_builder.push_str(".build().unwrap();");
 
     // Replace environment builder in host with new one
-    utils::replace(RISC0_HOST_MAIN, "let env = ExecutorEnv::builder().build().unwrap();", &new_builder)?;
+    utils::replace(
+        RISC0_HOST_MAIN,
+        "let env = ExecutorEnv::builder().build().unwrap();",
+        &new_builder,
+    )?;
 
     //TODO: FRAGILE!
     //Delete lines that contain zkRust::write(;
@@ -93,7 +122,7 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
 }
 
 /// Generates RISC0 proof and image ID
-pub fn generate_risc0_proof() -> io::Result<()> {
+pub fn generate_risc0_proof() -> io::Result<ExitStatus> {
     let guest_path = fs::canonicalize(RISC0_WORKSPACE_DIR)?;
 
     Command::new("cargo")
@@ -101,7 +130,4 @@ pub fn generate_risc0_proof() -> io::Result<()> {
         .arg("--release")
         .current_dir(guest_path)
         .status()
-        .unwrap();
-
-    Ok(())
 }

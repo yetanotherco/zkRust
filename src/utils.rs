@@ -1,9 +1,10 @@
+use log::info;
+use regex::Regex;
 use std::{
-    fs::{self, OpenOptions},
-    io::{self, BufRead, ErrorKind, Read, Seek, Write},
+    fs::{self, File, OpenOptions},
+    io::{self, BufRead, BufReader, ErrorKind, Read, Seek, Write},
     path::Path,
 };
-use regex::Regex;
 
 pub fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
     // Open the file in read mode to read its existing content
@@ -98,23 +99,26 @@ fn copy_dependencies(toml_path: &str, guest_toml_path: &str) {
     }
 }
 
+//TODO: since build tables intefere between host and guest you cannot just copy to either.
 pub fn prepare_workspace(
     guest_path: &str,
-    workspace_program_src_dir: &str,
-    workspace_program_toml_dir: &str,
+    program_src_dir: &str,
+    program_toml_dir: &str,
+    host_src_dir: &str,
     base_toml_dir: &str,
 ) -> io::Result<()> {
-    if let Err(e) = fs::remove_dir_all(&workspace_program_src_dir) {
+    if let Err(e) = fs::remove_dir_all(&program_src_dir) {
         if e.kind() != ErrorKind::NotFound {
             return Err(e);
         }
     }
-    fs::create_dir_all(workspace_program_src_dir)?;
-    let workspace_program_path = format!("{}/src/", guest_path);
-    copy_dir_all(&workspace_program_path, workspace_program_src_dir)?;
-    fs::copy(base_toml_dir, workspace_program_toml_dir)?;
+    fs::create_dir_all(program_src_dir)?;
+    let program_path = format!("{}/src/", guest_path);
+    copy_dir_all(&program_path, program_src_dir)?;
+    copy_dir_all(&program_path, host_src_dir)?;
+    fs::copy(base_toml_dir, program_toml_dir)?;
     let toml_path = format!("{}/Cargo.toml", guest_path);
-    copy_dependencies(&toml_path, workspace_program_toml_dir);
+    copy_dependencies(&toml_path, program_toml_dir);
 
     Ok(())
 }
@@ -152,29 +156,53 @@ pub fn extract_regex(file_path: &str, exp: &str) -> io::Result<Option<String>> {
     Ok(None)
 }
 
-pub fn extract(
-    target_file: &str,
-    search_string: &str,
-    truncation: usize,
+// todo -> extract using regex
+pub fn extract_till_last_occurence(
+    file_path: &str,
+    search: &str,
+    start: &str,
+    end: &str,
 ) -> io::Result<Option<String>> {
-    // Read the contents of the target file
-    let mut target_contents = String::new();
-    fs::File::open(&target_file)?.read_to_string(&mut target_contents)?;
+    let mut contents = String::new();
+    fs::File::open(file_path)?.read_to_string(&mut contents)?;
+    // Find the position of the search string
+    if let Some(search_pos) = contents.find(search) {
+        // Find the position of the first 'start' after the search string
+        if let Some(start_pos) = contents[search_pos..].find(start) {
+            let start_pos = search_pos + start_pos;
+            // Find the position of the last 'end' after the opening 'start'
+            if let Some(end_pos) = contents[start_pos..].rfind(end) {
+                let end_pos = start_pos + end_pos;
+                // Extract and return the substring between 'start' and the last occurence 'end'
+                return Ok(Some(contents[start_pos + 1..end_pos].to_string()));
+            }
+        }
+    }
+    Ok(None)
+}
 
-    // Find the position of the search string in the target file
-    if let Some(pos) = target_contents.find(search_string) {
-        // Split the target contents into two parts
-        let content = &target_contents[pos + search_string.len()..];
+pub fn extract_imports(filename: &str) -> io::Result<String> {
+    // Open the file
+    let file = File::open(filename)?;
+    let reader = BufReader::new(file);
 
-        // remove trailing curly brace
-        let res = content[..content.len() - truncation].to_string();
-        
-        return Ok(Some(res))
-    } else {
-        println!("Search string not found in target file.");
+    // Initialize an empty string to collect import statements
+    let mut imports = String::new();
+
+    // Read the file line by line
+    for line in reader.lines() {
+        let line = line?;
+        // Check if the line starts with "use "
+        if line.trim_start().starts_with("use ")
+            || line.trim_start().starts_with("pub mod ")
+            || line.trim_start().starts_with("mod ")
+        {
+            imports.push_str(&line);
+            imports.push('\n');
+        }
     }
 
-    Ok(None)
+    Ok(imports)
 }
 
 // TODO: Abstract Regex
@@ -182,7 +210,7 @@ pub fn extract(
 pub fn extract_values(file_path: &str, search_text: &str) -> io::Result<Vec<String>> {
     let file = fs::File::open(file_path)?;
     let reader = io::BufReader::new(file);
-    
+
     let mut values = Vec::new();
     let regex = Regex::new(&format!(r"{}[(](.*?)[)]", regex::escape(search_text))).unwrap();
 
@@ -199,7 +227,6 @@ pub fn extract_values(file_path: &str, search_text: &str) -> io::Result<Vec<Stri
 }
 
 pub fn remove_lines(file_path: &str, target: &str) -> io::Result<()> {
-
     // Read the file line by line
     let file = fs::File::open(file_path)?;
     let reader = io::BufReader::new(file);
