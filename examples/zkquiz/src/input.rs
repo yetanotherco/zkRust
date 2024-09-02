@@ -1,5 +1,5 @@
 use question::ask_question;
-pub mod question;
+mod question;
 
 pub fn input() {
     println!("Welcome to the quiz! Please answer the following questions to generate a proof for the program.");

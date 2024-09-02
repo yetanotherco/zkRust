@@ -105,6 +105,7 @@ pub fn prepare_workspace(
     program_src_dir: &str,
     program_toml_dir: &str,
     host_src_dir: &str,
+    host_toml_dir: &str,
     base_toml_dir: &str,
 ) -> io::Result<()> {
     if let Err(e) = fs::remove_dir_all(&program_src_dir) {
@@ -119,6 +120,7 @@ pub fn prepare_workspace(
     fs::copy(base_toml_dir, program_toml_dir)?;
     let toml_path = format!("{}/Cargo.toml", guest_path);
     copy_dependencies(&toml_path, program_toml_dir);
+    copy_dependencies(&toml_path, host_toml_dir);
 
     Ok(())
 }
