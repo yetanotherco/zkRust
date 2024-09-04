@@ -1,5 +1,4 @@
 use crate::utils::{get_light_blocks, verify_blocks};
-use zk_rust_io;
 
 mod utils;
 

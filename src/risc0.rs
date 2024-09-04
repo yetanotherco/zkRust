@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     fs, io,
     process::{Command, ExitStatus},
 };
@@ -11,7 +12,8 @@ pub const RISC0_GUEST_DIR: &str = "./workspaces/risc0/methods/guest/";
 pub const RISC0_SRC_DIR: &str = "./workspaces/risc0/methods/guest/src";
 pub const RISC0_GUEST_MAIN: &str = "./workspaces/risc0/methods/guest/src/main.rs";
 pub const RISC0_HOST_MAIN: &str = "./workspaces/risc0/host/src/main.rs";
-pub const RISC0_BASE_CARGO_TOML: &str = "./workspaces/base_files/risc0/cargo";
+pub const RISC0_BASE_HOST_CARGO_TOML: &str = "./workspaces/base_files/risc0/cargo_host";
+pub const RISC0_BASE_GUEST_CARGO_TOML: &str = "./workspaces/base_files/risc0/cargo_guest";
 pub const RISC0_BASE_HOST: &str = "./workspaces/base_files/risc0/host";
 pub const RISC0_GUEST_CARGO_TOML: &str = "./workspaces/risc0/methods/guest/Cargo.toml";
 
@@ -67,6 +69,26 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     println!();
     println!("input imports {:?}", input_imports);
     println!();
+
+    let output_path = format!("{}/src/output.rs", guest_path);
+    let output_imports = utils::extract_imports(&output_path)?;
+    println!();
+    println!("output imports {:?}", output_imports);
+    println!();
+
+    let mut import_set = HashSet::new();
+    let mut imports = String::new();
+
+    for import in input_imports.into_iter().chain(output_imports) {
+        if import_set.insert(import.clone()) {
+            imports.push_str(&import);
+        }
+    }
+
+    println!();
+    println!("imports {:?}", imports);
+    println!();
+
     //TODO: eliminate
     let input =
         utils::extract_till_last_occurence(&input_path, "pub fn input() ", "{", "}")?.unwrap();
@@ -75,11 +97,6 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     println!("input body {:?}", input);
     println!();
 
-    let output_path = format!("{}/src/output.rs", guest_path);
-    let output_imports = utils::extract_imports(&output_path)?;
-    println!();
-    println!("output imports {:?}", output_imports);
-    println!();
     //TODO: eliminate unwrap
     let output =
         utils::extract_till_last_occurence(&output_path, "pub fn output() ", "{", "}")?.unwrap();
@@ -87,8 +104,8 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     println!("output body {:?}", output);
     println!();
 
-    utils::prepend_to_file(RISC0_HOST_MAIN, &input_imports)?;
-    utils::prepend_to_file(RISC0_HOST_MAIN, &output_imports)?;
+    utils::prepend_to_file(RISC0_HOST_MAIN, &imports)?;
+    //utils::prepend_to_file(RISC0_HOST_MAIN, &output_imports)?;
 
     // Insert input body
     utils::insert(RISC0_HOST_MAIN, &input, utils::HOST_INPUT)?;

@@ -52,7 +52,8 @@ fn main() -> io::Result<()> {
                 sp1::SP1_GUEST_CARGO_TOML,
                 "./workspaces/sp1/script/src",
                 "./workspaces/sp1/script/Cargo.toml",
-                sp1::SP1_BASE_CARGO_TOML,
+                sp1::SP1_BASE_HOST_CARGO_TOML,
+                sp1::SP1_BASE_GUEST_CARGO_TOML,
             )?;
             std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
 
@@ -113,7 +114,8 @@ fn main() -> io::Result<()> {
                 risc0::RISC0_GUEST_CARGO_TOML,
                 "./workspaces/risc0/host/src",
                 "./workspaces/risc0/host/Cargo.toml",
-                risc0::RISC0_BASE_CARGO_TOML,
+                risc0::RISC0_BASE_HOST_CARGO_TOML,
+                risc0::RISC0_BASE_GUEST_CARGO_TOML,
             )?;
             std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
 

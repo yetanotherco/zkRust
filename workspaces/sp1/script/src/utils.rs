@@ -10,6 +10,15 @@ use tendermint_light_client_verifier::{ProdVerifier, Verdict, Verifier};
 pub const BLOCK_2279100: &[u8] = include_bytes!("./files/block_2279100.json");
 pub const BLOCK_2279130: &[u8] = include_bytes!("./files/block_2279130.json");
 
+pub fn load_light_block(block_height: u64) -> Result<LightBlock, Box<dyn Error>> {
+    //TODO: make this work for both directory structures
+    let mut file = File::open(&format!("src/files/block_{}.json", block_height))?;
+    let mut block_response_raw = String::new();
+    file.read_to_string(&mut block_response_raw)
+        .expect(&format!("Failed to read block number {}", block_height));
+    Ok(serde_json::from_str(&block_response_raw)?)
+}
+
 pub fn verify_blocks(light_block_1: LightBlock, light_block_2: LightBlock) -> Verdict {
     let vp = ProdVerifier::default();
     let opt = Options {

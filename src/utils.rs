@@ -1,4 +1,3 @@
-use log::info;
 use regex::Regex;
 use std::{
     fs::{self, File, OpenOptions},
@@ -34,7 +33,7 @@ pub fn replace(file_path: &str, search_string: &str, replace_string: &str) -> io
     let new_contents = contents.replace(search_string, replace_string);
 
     // Write the new contents back to the file
-    let mut file = fs::File::create(&file_path)?;
+    let mut file = fs::File::create(file_path)?;
     file.write_all(new_contents.as_bytes())?;
 
     Ok(())
@@ -57,7 +56,7 @@ fn copy_dir_all(src: &impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()>
 pub fn insert(target_file: &str, text: &str, search_string: &str) -> io::Result<()> {
     // Read the contents of the target file
     let mut target_contents = String::new();
-    fs::File::open(&target_file)?.read_to_string(&mut target_contents)?;
+    fs::File::open(target_file)?.read_to_string(&mut target_contents)?;
 
     // Find the position of the search string in the target file
     if let Some(pos) = target_contents.find(search_string) {
@@ -68,7 +67,7 @@ pub fn insert(target_file: &str, text: &str, search_string: &str) -> io::Result<
         let new_contents = format!("{}{}{}", before, text, after);
 
         // Write the new contents back to the target file
-        let mut file = fs::File::create(&target_file)?;
+        let mut file = fs::File::create(target_file)?;
         file.write_all(new_contents.as_bytes())?;
     } else {
         println!("Search string not found in target file.");
@@ -106,18 +105,21 @@ pub fn prepare_workspace(
     program_toml_dir: &str,
     host_src_dir: &str,
     host_toml_dir: &str,
-    base_toml_dir: &str,
+    base_host_toml_dir: &str,
+    base_guest_toml_dir: &str,
 ) -> io::Result<()> {
-    if let Err(e) = fs::remove_dir_all(&program_src_dir) {
+    if let Err(e) = fs::remove_dir_all(program_src_dir) {
         if e.kind() != ErrorKind::NotFound {
             return Err(e);
         }
     }
     fs::create_dir_all(program_src_dir)?;
+    fs::create_dir_all(host_src_dir)?;
     let program_path = format!("{}/src/", guest_path);
     copy_dir_all(&program_path, program_src_dir)?;
     copy_dir_all(&program_path, host_src_dir)?;
-    fs::copy(base_toml_dir, program_toml_dir)?;
+    fs::copy(base_guest_toml_dir, program_toml_dir)?;
+    fs::copy(base_host_toml_dir, host_toml_dir)?;
     let toml_path = format!("{}/Cargo.toml", guest_path);
     copy_dependencies(&toml_path, program_toml_dir);
     copy_dependencies(&toml_path, host_toml_dir);
@@ -183,24 +185,24 @@ pub fn extract_till_last_occurence(
     Ok(None)
 }
 
-pub fn extract_imports(filename: &str) -> io::Result<String> {
+pub fn extract_imports(filename: &str) -> io::Result<Vec<String>> {
     // Open the file
     let file = File::open(filename)?;
     let reader = BufReader::new(file);
 
-    // Initialize an empty string to collect import statements
-    let mut imports = String::new();
+    // Initialize HashSet to accumulate imports without repeats.
+    let mut imports = Vec::new();
 
     // Read the file line by line
     for line in reader.lines() {
-        let line = line?;
+        let mut line = line?;
         // Check if the line starts with "use "
         if line.trim_start().starts_with("use ")
             || line.trim_start().starts_with("pub mod ")
             || line.trim_start().starts_with("mod ")
         {
-            imports.push_str(&line);
-            imports.push('\n');
+            line.push('\n');
+            imports.push(line);
         }
     }
 
@@ -236,12 +238,12 @@ pub fn remove_lines(file_path: &str, target: &str) -> io::Result<()> {
     // Collect lines that do not contain the target string
     let lines: Vec<String> = reader
         .lines()
-        .filter_map(|line| line.ok())
+        .map_while(Result::ok)
         .filter(|line| !line.contains(target))
         .collect();
 
     // Write the filtered lines back to the file
-    let mut file = fs::File::create(&file_path)?;
+    let mut file = fs::File::create(file_path)?;
     for line in lines {
         writeln!(file, "{}", line)?;
     }

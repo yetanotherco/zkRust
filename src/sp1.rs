@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     fs, io,
     process::{Command, ExitStatus},
 };
@@ -11,7 +12,8 @@ pub const SP1_GUEST_DIR: &str = "./workspaces/sp1/program/";
 pub const SP1_SRC_DIR: &str = "./workspaces/sp1/program/src";
 pub const SP1_GUEST_MAIN: &str = "./workspaces/sp1/program/src/main.rs";
 pub const SP1_HOST_MAIN: &str = "./workspaces/sp1/script/src/main.rs";
-pub const SP1_BASE_CARGO_TOML: &str = "./workspaces/base_files/sp1/cargo";
+pub const SP1_BASE_GUEST_CARGO_TOML: &str = "./workspaces/base_files/sp1/cargo_guest";
+pub const SP1_BASE_HOST_CARGO_TOML: &str = "./workspaces/base_files/sp1/cargo_host";
 pub const SP1_BASE_HOST: &str = "./workspaces/base_files/sp1/host";
 pub const SP1_GUEST_CARGO_TOML: &str = "./workspaces/sp1/program/Cargo.toml";
 
@@ -86,10 +88,25 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     println!();
     println!("output body {:?}", output);
     println!();
+
+    let mut import_set = HashSet::new();
+    let mut imports = String::new();
+
+    for import in input_imports.into_iter().chain(output_imports) {
+        if import_set.insert(import.clone()) {
+            imports.push_str(&import);
+        }
+    }
+
+    println!();
+    println!("imports {:?}", imports);
+    println!();
+
     //prepend imports
     //prepend imports
-    utils::prepend_to_file(SP1_HOST_MAIN, &input_imports)?;
-    utils::prepend_to_file(SP1_HOST_MAIN, &output_imports)?;
+    //utils::prepend_to_file(SP1_HOST_MAIN, &input_imports)?;
+    //utils::prepend_to_file(SP1_HOST_MAIN, &output_imports)?;
+    utils::prepend_to_file(SP1_HOST_MAIN, &imports)?;
 
     // Insert input body
     utils::insert(SP1_HOST_MAIN, &input, utils::HOST_INPUT)?;

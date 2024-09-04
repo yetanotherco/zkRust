@@ -32,18 +32,18 @@ pub fn main() {
     println!("cycle-tracker-end: header hash");
 
     println!("cycle-tracker-start: public input headers");
-    zk_rust_io::commit_slice(header_hash_1.as_bytes());
-    zk_rust_io::commit_slice(header_hash_2.as_bytes());
+    zk_rust_io::commit(&header_hash_1.as_bytes());
+    zk_rust_io::commit(&header_hash_2.as_bytes());
     println!("cycle-tracker-end: public input headers");
 
     println!("cycle-tracker-start: verify");
     let vp = ProdVerifier::default();
     let opt = Options {
         trust_threshold: Default::default(),
-        trusting_period: Duration::from_secs(500),
+        trusting_period: std::time::Duration::from_secs(500),
         clock_drift: Default::default(),
     };
-    let verify_time = light_block_2.time() + Duration::from_secs(20);
+    let verify_time = light_block_2.time() + std::time::Duration::from_secs(20);
     let verdict = vp.verify_update_header(
         light_block_2.as_untrusted_state(),
         light_block_1.as_trusted_state(),
@@ -54,7 +54,7 @@ pub fn main() {
 
     println!("cycle-tracker-start: public inputs verdict");
     let verdict_encoded = serde_cbor::to_vec(&verdict).unwrap();
-    zk_rust_io::commit(verdict_encoded.as_slice());
+    zk_rust_io::commit(&verdict_encoded.as_slice());
     println!("cycle-tracker-end: public inputs verdict");
 
     match verdict {
