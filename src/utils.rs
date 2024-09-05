@@ -5,6 +5,19 @@ use std::{
     path::Path,
 };
 
+// Host
+pub const IO_WRITE: &str = "zk_rust_io::write";
+pub const IO_OUT: &str = "zk_rust_io::out();";
+pub const HOST_INPUT: &str = "// INPUT //";
+pub const HOST_OUTPUT: &str = "// OUTPUT //";
+
+// I/O Markers
+pub const IO_READ: &str = "zk_rust_io::read();";
+pub const IO_COMMIT: &str = "zk_rust_io::commit";
+
+pub const OUTPUT_FUNC: &str = r"pub fn output() {";
+pub const INPUT_FUNC: &str = r"pub fn input() {";
+
 pub fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
     // Open the file in read mode to read its existing content
     let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
@@ -126,20 +139,6 @@ pub fn prepare_workspace(
 
     Ok(())
 }
-
-// Host
-pub const IO_WRITE: &str = "zk_rust_io::write";
-pub const IO_OUT: &str = "zk_rust_io::out();";
-
-// Guest
-pub const IO_READ: &str = "zk_rust_io::read();";
-pub const IO_COMMIT: &str = "zk_rust_io::commit";
-
-pub const OUTPUT_FUNC: &str = r"pub fn output() {";
-pub const INPUT_FUNC: &str = r"pub fn input() {";
-
-pub const HOST_INPUT: &str = "// INPUT //";
-pub const HOST_OUTPUT: &str = "// OUTPUT //";
 
 pub fn extract_regex(file_path: &str, exp: &str) -> io::Result<Option<String>> {
     // Read the contents of the file
