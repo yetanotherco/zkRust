@@ -41,6 +41,8 @@ pub const RISC0_GUEST_PROGRAM_HEADER_STD: &str =
 /// RISC0 Cargo patch for accelerated SHA-256, K256, and bigint-multiplication circuits
 pub const RISC0_ACCELERATION_IMPORT: &str = "\n[patch.crates-io]\nsha2 = { git = \"https://github.com/risc0/RustCrypto-hashes\", tag = \"sha2-v0.10.6-risczero.0\" }\nk256 = { git = \"https://github.com/risc0/RustCrypto-elliptic-curves\", tag = \"k256/v0.13.1-risczero.1\"  }\ncrypto-bigint = { git = \"https://github.com/risc0/RustCrypto-crypto-bigint\", tag = \"v0.5.2-risczero.0\" }";
 
+//TODO: this changes to just writing to string with GUEST_PROGRAM_HEADER | MAIN_FUNCTION | CODE FROM MAIN FUNCTION file
+//TODO: in line this
 /// This function mainly adds this header to the guest in order for it to be proven by
 /// risc0:
 ///
@@ -52,6 +54,7 @@ pub fn prepare_risc0_guest() -> io::Result<()> {
     Ok(())
 }
 
+//TODO: in line this
 pub fn prepare_guest_io() -> io::Result<()> {
     // replace zkRust::read()
     utils::replace(RISC0_GUEST_MAIN, utils::IO_READ, RISC0_IO_READ)?;
@@ -62,6 +65,10 @@ pub fn prepare_guest_io() -> io::Result<()> {
     Ok(())
 }
 
+//TODO: Replace in string before writing to file.
+//TODO: Still find and replace in file.
+//TODO: in line this
+//TODO: replace deleting whole lines of zk_rust_io::write() with just specifying ""
 pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     //TODO: remove output & input functions after copying
     let input_path = format!("{}/src/input.rs", guest_path);
@@ -129,8 +136,8 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
         &new_builder,
     )?;
 
-    //TODO: FRAGILE!
-    //Delete lines that contain zkRust::write(;
+    //TODO: FRAGILE! -> switch to remove regex pattern
+    //Delete lines that contain zkRust::write(; -> Delete things from within zk_rust_io -> );
     utils::remove_lines(RISC0_HOST_MAIN, "zk_rust_io::write(")?;
 
     // replace zkRust::out()

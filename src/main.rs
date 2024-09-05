@@ -63,6 +63,7 @@ fn main() -> io::Result<()> {
                 sp1::prepare_host_io(&args.guest_path)?;
             }
 
+            // TODO: insert at end of file
             if args.precompiles {
                 utils::insert(
                     sp1::SP1_GUEST_CARGO_TOML,
@@ -136,13 +137,6 @@ fn main() -> io::Result<()> {
 
             if risc0::generate_risc0_proof()?.success() {
                 info!("Risc0 proof and Image ID generated");
-
-                utils::replace(
-                    risc0::RISC0_GUEST_CARGO_TOML,
-                    risc0::RISC0_ACCELERATION_IMPORT,
-                    "",
-                )
-                .unwrap();
 
                 // Submit to aligned
                 if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {

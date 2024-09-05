@@ -36,6 +36,8 @@ pub const SP1_HOST_READ: &str = "proof.public_values.read();";
 pub const SP1_IO_READ: &str = "sp1_zkvm::io::read();";
 pub const SP1_IO_COMMIT: &str = "sp1_zkvm::io::commit";
 
+//TODO: this changes to just writing to string with GUEST_PROGRAM_HEADER | MAIN_FUNCTION | CODE FROM MAIN FUNCTION file
+//TODO: in line this
 /// This function mainly adds this header to the guest in order for it to be proven by
 /// sp1:
 ///
@@ -47,6 +49,7 @@ pub fn prepare_sp1_program() -> io::Result<()> {
     Ok(())
 }
 
+//TODO: in line this
 pub fn prepare_guest_io() -> io::Result<()> {
     // replace zkRust::read()
     utils::replace(SP1_GUEST_MAIN, utils::IO_READ, SP1_IO_READ)?;
@@ -56,6 +59,9 @@ pub fn prepare_guest_io() -> io::Result<()> {
     Ok(())
 }
 
+//TODO: Replace in string before writing to file.
+//TODO: Still find and replace in file.
+//TODO: in line this
 pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     //TODO: remove output & input functions after copying
     //TODO: only read file once

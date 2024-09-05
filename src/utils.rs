@@ -230,6 +230,7 @@ pub fn extract_values(file_path: &str, search_text: &str) -> io::Result<Vec<Stri
     Ok(values)
 }
 
+//Change to remove regex and remove the marker
 pub fn remove_lines(file_path: &str, target: &str) -> io::Result<()> {
     // Read the file line by line
     let file = fs::File::open(file_path)?;
