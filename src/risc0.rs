@@ -68,7 +68,6 @@ pub fn prepare_guest_io() -> io::Result<()> {
 //TODO: Replace in string before writing to file.
 //TODO: Still find and replace in file.
 //TODO: in line this
-//TODO: replace deleting whole lines of zk_rust_io::write() with just specifying ""
 pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     //TODO: remove output & input functions after copying
     let input_path = format!("{}/src/input.rs", guest_path);
@@ -96,7 +95,7 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     println!("imports {:?}", imports);
     println!();
 
-    //TODO: eliminate
+    //TODO: eliminate unwrap()
     let input =
         utils::extract_till_last_occurence(&input_path, "pub fn input() ", "{", "}")?.unwrap();
     // Extract output body
@@ -112,7 +111,6 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     println!();
 
     utils::prepend_to_file(RISC0_HOST_MAIN, &imports)?;
-    //utils::prepend_to_file(RISC0_HOST_MAIN, &output_imports)?;
 
     // Insert input body
     utils::insert(RISC0_HOST_MAIN, &input, utils::HOST_INPUT)?;
@@ -120,7 +118,10 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     utils::insert(RISC0_HOST_MAIN, &output, utils::HOST_OUTPUT)?;
 
     // Extract Variable names from host and add them to the ExecutorEnv::builder()
-    let values = utils::extract_values(RISC0_HOST_MAIN, utils::IO_WRITE)?;
+    let values = utils::extract_regex(
+        RISC0_HOST_MAIN,
+        &format!("{}[(](.*?)[)]", regex::escape(utils::IO_WRITE)),
+    )?;
 
     // Construct new Environment Builder
     let mut new_builder = RISC0_ENV_BUILDER.to_string();

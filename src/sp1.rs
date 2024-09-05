@@ -36,7 +36,7 @@ pub const SP1_HOST_READ: &str = "proof.public_values.read();";
 pub const SP1_IO_READ: &str = "sp1_zkvm::io::read();";
 pub const SP1_IO_COMMIT: &str = "sp1_zkvm::io::commit";
 
-//TODO: this changes to just writing to string with GUEST_PROGRAM_HEADER | MAIN_FUNCTION | CODE FROM MAIN FUNCTION file
+//TODO: this changes to just writing to string with GUEST_PROGRAM_HEADER | MAIN_FUNCTION | CODE FROM MAIN FUNCTION | } file
 //TODO: in line this
 /// This function mainly adds this header to the guest in order for it to be proven by
 /// sp1:
@@ -66,7 +66,7 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     //TODO: remove output & input functions after copying
     //TODO: only read file once
 
-    let input_path = format!("{}/src/input.rs", guest_path);
+    let input_path: String = format!("{}/src/input.rs", guest_path);
     let input_imports = utils::extract_imports(&input_path)?;
     // let input = utils::extract_regex(&input_path, r"pub\sfn\sinput\(\)\s*\{([^}]*)\}")?.unwrap();
     println!();

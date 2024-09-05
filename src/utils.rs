@@ -111,7 +111,6 @@ fn copy_dependencies(toml_path: &str, guest_toml_path: &str) {
     }
 }
 
-//TODO: since build tables intefere between host and guest you cannot just copy to either.
 pub fn prepare_workspace(
     guest_path: &str,
     program_src_dir: &str,
@@ -138,25 +137,6 @@ pub fn prepare_workspace(
     copy_dependencies(&toml_path, host_toml_dir);
 
     Ok(())
-}
-
-pub fn extract_regex(file_path: &str, exp: &str) -> io::Result<Option<String>> {
-    // Read the contents of the file
-    let mut contents = String::new();
-    fs::File::open(file_path)?.read_to_string(&mut contents)?;
-
-    // Define the regular expression to match the function body
-    let re = Regex::new(exp).unwrap();
-
-    // Capture the content inside the brackets of the function
-    if let Some(captures) = re.captures(&contents) {
-        if let Some(matched) = captures.get(1) {
-            return Ok(Some(matched.as_str().to_string()));
-        }
-    }
-
-    // Return None if no match is found
-    Ok(None)
 }
 
 // todo -> extract using regex
@@ -210,12 +190,12 @@ pub fn extract_imports(filename: &str) -> io::Result<Vec<String>> {
 
 // TODO: Abstract Regex
 //let regex = regex::new(&format!(r"{}[(](.*?)[)]", regex::escape(search_text))).unwrap();
-pub fn extract_values(file_path: &str, search_text: &str) -> io::Result<Vec<String>> {
+pub fn extract_regex(file_path: &str, regex: &str) -> io::Result<Vec<String>> {
     let file = fs::File::open(file_path)?;
     let reader = io::BufReader::new(file);
 
     let mut values = Vec::new();
-    let regex = Regex::new(&format!(r"{}[(](.*?)[)]", regex::escape(search_text))).unwrap();
+    let regex = Regex::new(&regex).unwrap();
 
     for line in reader.lines() {
         let line = line?;
