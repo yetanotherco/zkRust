@@ -77,7 +77,7 @@ pub fn insert(target_file: &str, text: &str, search_string: &str) -> io::Result<
         let (before, after) = target_contents.split_at(pos + search_string.len());
 
         // Combine the parts with the insert contents
-        let new_contents = format!("{}{}{}", before, text, after);
+        let new_contents = format!("{}\n{}\n{}", before, text, after);
 
         // Write the new contents back to the target file
         let mut file = fs::File::create(target_file)?;
@@ -89,6 +89,54 @@ pub fn insert(target_file: &str, text: &str, search_string: &str) -> io::Result<
     Ok(())
 }
 
+//Note: Works with a one off '{' not with '}'
+pub fn extract_function_bodies(file_path: &str, functions: Vec<String>) -> io::Result<Vec<String>> {
+    // Read the contents of the target file
+    let mut code = String::new();
+    fs::File::open(file_path)?.read_to_string(&mut code)?;
+
+    let mut start_indices = vec![];
+    let mut index = 0;
+
+    // Find all start indices of the function signature
+    for keyword in functions {
+        let start_index = code[index..].find(&keyword).unwrap();
+        let absolute_index = index + start_index;
+        start_indices.push(absolute_index);
+        index = absolute_index + keyword.len();
+    }
+
+    // Extract the code for each function
+    let mut extracted_codes = vec![];
+    for &start_index in &start_indices {
+        if let Some(start_brace_index) = code[start_index..].find('{') {
+            let start_brace_index = start_index + start_brace_index;
+            let mut stack = vec!['{'];
+            let mut end_index = start_brace_index;
+
+            for (i, ch) in code[start_brace_index + 1..].chars().enumerate() {
+                match ch {
+                    '{' => stack.push('{'),
+                    '}' => {
+                        stack.pop();
+                        if stack.is_empty() {
+                            end_index = start_brace_index + 1 + i;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            let extracted_code = &code[start_brace_index + 1..end_index].trim();
+            extracted_codes.push(extracted_code.to_string());
+        }
+    }
+
+    Ok(extracted_codes)
+}
+
+//TODO: make this smarter -> end if next '[' found?
 fn copy_dependencies(toml_path: &str, guest_toml_path: &str) {
     let mut toml = std::fs::File::open(toml_path).unwrap();
     let mut content = String::new();
@@ -164,13 +212,13 @@ pub fn extract_till_last_occurence(
     Ok(None)
 }
 
-//TODO(optimization): refactor this to eliminate the clone at each step.
-pub fn get_imports(filename: &str) -> io::Result<Vec<String>> {
+//TODO: refactor this to eliminate the clone at each step.
+pub fn get_imports(filename: &str) -> io::Result<String> {
     // Open the file
     let file = File::open(filename)?;
     let mut lines = BufReader::new(file).lines();
 
-    let mut imports = Vec::new();
+    let mut imports = String::new();
 
     // Read the file line by line
     while let Some(line) = lines.next() {
@@ -181,7 +229,7 @@ pub fn get_imports(filename: &str) -> io::Result<Vec<String>> {
             || line.trim_start().starts_with("mod ")
         {
             line.push('\n');
-            imports.push(line.clone());
+            imports.push_str(&line.clone());
             // check if line does not contains a use declarator and a ';'
             // if not continue reading till one is found this covers the case where import statements cover multiple lines
             if !line.contains(';') {
@@ -189,7 +237,7 @@ pub fn get_imports(filename: &str) -> io::Result<Vec<String>> {
                 while let Some(line) = lines.next() {
                     let mut line = line?;
                     line.push('\n');
-                    imports.push(line.clone());
+                    imports.push_str(&line.clone());
                     if line.contains(';') {
                         break;
                     }

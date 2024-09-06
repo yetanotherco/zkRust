@@ -33,8 +33,6 @@ struct ProofArgs {
     #[clap(long)]
     submit_to_aligned_with_keystore: Option<PathBuf>,
     #[clap(long)]
-    io: bool,
-    #[clap(long)]
     precompiles: bool,
 }
 
@@ -46,6 +44,10 @@ fn main() -> io::Result<()> {
         Commands::ProveSp1(args) => {
             info!("proving with sp1, program in: {}", args.guest_path);
 
+            // Perform sanitation checks on directory
+
+            //TODO: to add input to the guest we need to modify the host....
+            //TODO: remove redundant writes to the guest
             utils::prepare_workspace(
                 &args.guest_path,
                 sp1::SP1_SRC_DIR,
@@ -55,15 +57,24 @@ fn main() -> io::Result<()> {
                 sp1::SP1_BASE_HOST_CARGO_TOML,
                 sp1::SP1_BASE_GUEST_CARGO_TOML,
             )?;
+            //TODO -> this is currently needed to prevent writing over the function... once directory validation is fixed this can be removed
             std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
 
-            sp1::prepare_sp1_program()?;
-            if args.io {
-                sp1::prepare_guest_io()?;
-                sp1::prepare_host_io(&args.guest_path)?;
-            }
+            //TODO: fetch these from program directory file.......
+            let imports = utils::get_imports(sp1::SP1_GUEST_MAIN).unwrap();
+            let function_bodies = utils::extract_function_bodies(
+                sp1::SP1_GUEST_MAIN,
+                vec![
+                    "pub fn main()".to_string(),
+                    "pub fn input()".to_string(),
+                    "pub fn output()".to_string(),
+                ],
+            )
+            .unwrap();
+            sp1::prepare_guest(&imports, &function_bodies[0])?;
+            sp1::prepare_host(&function_bodies[1], &function_bodies[2], &imports)?;
 
-            // TODO: insert at end of file
+            // TODO: append to end of cargo toml -> No insertion
             if args.precompiles {
                 utils::insert(
                     sp1::SP1_GUEST_CARGO_TOML,
@@ -107,6 +118,8 @@ fn main() -> io::Result<()> {
         Commands::ProveRisc0(args) => {
             info!("proving with risc0, program in: {}", args.guest_path);
 
+            // Perform sanitation checks on directory
+
             //TODO: to add input to the guest we need to modify the host....
             // This shouldn't be ridiculously hard if we get
             utils::prepare_workspace(
@@ -118,14 +131,23 @@ fn main() -> io::Result<()> {
                 risc0::RISC0_BASE_HOST_CARGO_TOML,
                 risc0::RISC0_BASE_GUEST_CARGO_TOML,
             )?;
+            //TODO -> this is currently needed to prevent writing over the function... once directory validation is fixed this can be removed
             std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
 
-            risc0::prepare_risc0_guest()?;
-            if args.io {
-                risc0::prepare_guest_io()?;
-                risc0::prepare_host_io(&args.guest_path)?;
-            }
+            let imports = utils::get_imports(risc0::RISC0_GUEST_MAIN).unwrap();
+            let function_bodies = utils::extract_function_bodies(
+                risc0::RISC0_GUEST_MAIN,
+                vec![
+                    "pub fn main()".to_string(),
+                    "pub fn input()".to_string(),
+                    "pub fn output()".to_string(),
+                ],
+            )
+            .unwrap();
+            risc0::prepare_guest(&imports, &function_bodies[0])?;
+            risc0::prepare_host(&function_bodies[1], &function_bodies[2], &imports)?;
 
+            // TODO: append to end of cargo toml -> No insertion
             if args.precompiles {
                 utils::insert(
                     risc0::RISC0_GUEST_CARGO_TOML,
