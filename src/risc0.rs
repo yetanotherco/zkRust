@@ -71,13 +71,13 @@ pub fn prepare_guest_io() -> io::Result<()> {
 pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     //TODO: remove output & input functions after copying
     let input_path = format!("{}/src/input.rs", guest_path);
-    let input_imports = utils::extract_imports(&input_path)?;
+    let input_imports = utils::get_imports(&input_path)?;
     println!();
     println!("input imports {:?}", input_imports);
     println!();
 
     let output_path = format!("{}/src/output.rs", guest_path);
-    let output_imports = utils::extract_imports(&output_path)?;
+    let output_imports = utils::get_imports(&output_path)?;
     println!();
     println!("output imports {:?}", output_imports);
     println!();

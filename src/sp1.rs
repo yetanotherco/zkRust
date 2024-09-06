@@ -67,7 +67,7 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
     //TODO: only read file once
 
     let input_path: String = format!("{}/src/input.rs", guest_path);
-    let input_imports = utils::extract_imports(&input_path)?;
+    let input_imports = utils::get_imports(&input_path)?;
     // let input = utils::extract_regex(&input_path, r"pub\sfn\sinput\(\)\s*\{([^}]*)\}")?.unwrap();
     println!();
     println!("input imports {:?}", input_imports);
@@ -83,7 +83,7 @@ pub fn prepare_host_io(guest_path: &str) -> io::Result<()> {
 
     // Extract output body
     let output_path = format!("{}/src/output.rs", guest_path);
-    let output_imports = utils::extract_imports(&output_path)?;
+    let output_imports = utils::get_imports(&output_path)?;
     println!();
     println!("output imports {:?}", output_imports);
     println!();

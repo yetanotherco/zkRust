@@ -164,16 +164,16 @@ pub fn extract_till_last_occurence(
     Ok(None)
 }
 
-pub fn extract_imports(filename: &str) -> io::Result<Vec<String>> {
+//TODO(optimization): refactor this to eliminate the clone at each step.
+pub fn get_imports(filename: &str) -> io::Result<Vec<String>> {
     // Open the file
     let file = File::open(filename)?;
-    let reader = BufReader::new(file);
+    let mut lines = BufReader::new(file).lines();
 
-    // Initialize HashSet to accumulate imports without repeats.
     let mut imports = Vec::new();
 
     // Read the file line by line
-    for line in reader.lines() {
+    while let Some(line) = lines.next() {
         let mut line = line?;
         // Check if the line starts with "use "
         if line.trim_start().starts_with("use ")
@@ -181,7 +181,20 @@ pub fn extract_imports(filename: &str) -> io::Result<Vec<String>> {
             || line.trim_start().starts_with("mod ")
         {
             line.push('\n');
-            imports.push(line);
+            imports.push(line.clone());
+            // check if line does not contains a use declarator and a ';'
+            // if not continue reading till one is found this covers the case where import statements cover multiple lines
+            if !line.contains(';') {
+                // Iterate and continue adding lines to the import while line does not contain a ';' break if it does
+                while let Some(line) = lines.next() {
+                    let mut line = line?;
+                    line.push('\n');
+                    imports.push(line.clone());
+                    if line.contains(';') {
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -189,7 +202,6 @@ pub fn extract_imports(filename: &str) -> io::Result<Vec<String>> {
 }
 
 // TODO: Abstract Regex
-//let regex = regex::new(&format!(r"{}[(](.*?)[)]", regex::escape(search_text))).unwrap();
 pub fn extract_regex(file_path: &str, regex: &str) -> io::Result<Vec<String>> {
     let file = fs::File::open(file_path)?;
     let reader = io::BufReader::new(file);

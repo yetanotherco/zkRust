@@ -1,5 +1,6 @@
-use tendermint_light_client_verifier::{options::Options, types::LightBlock};
-use tendermint_light_client_verifier::{ProdVerifier, Verdict, Verifier};
+use tendermint_light_client_verifier::{
+    options::Options, types::LightBlock, ProdVerifier, Verdict, Verifier,
+};
 use zk_rust_io;
 
 pub fn main() {
