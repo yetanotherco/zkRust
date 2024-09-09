@@ -169,6 +169,8 @@ pub fn prepare_workspace(
     base_host_toml_dir: &str,
     base_guest_toml_dir: &str,
 ) -> io::Result<()> {
+    // Create proof_data directory
+    std::fs::create_dir_all("./proof_data").expect("Failed to create proof_data/");
     let workspace_guest_src_dir = format!("{}/src/", workspace_guest_dir);
     let workspace_host_src_dir = format!("{}/src/", workspace_host_dir);
     if let Err(e) = fs::remove_dir_all(&workspace_guest_src_dir) {

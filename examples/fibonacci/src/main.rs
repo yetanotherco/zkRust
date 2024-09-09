@@ -23,7 +23,6 @@ fn input() {
 }
 
 fn output() {
-    let _: u32 = zk_rust_io::read();
     let a: u32 = zk_rust_io::read();
     let b: u32 = zk_rust_io::read();
 

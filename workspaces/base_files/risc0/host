@@ -2,6 +2,7 @@
 // The ELF is used for proving and the ID is used for verification.
 use methods::{METHOD_ELF, METHOD_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv};
+use std::io::Write;
 
 const PROOF_FILE_PATH: &str = "../../proof_data/risc0/risc0.proof";
 const IMAGE_ID_FILE_PATH: &str = "../../proof_data/risc0/risc0.imageid";
@@ -30,11 +31,22 @@ fn main() {
 
     let serialized = bincode::serialize(&receipt).unwrap();
 
-    std::fs::write(PROOF_FILE_PATH, serialized).expect("Failed to write proof file");
-    std::fs::write(IMAGE_ID_FILE_PATH, convert(&METHOD_ID))
-        .expect("Failed to write fibonacci_id file");
-    std::fs::write(PUBLIC_INPUT_FILE_PATH, receipt.journal.bytes)
-        .expect("Failed to write pub_input file");
+    std::fs::create_dir_all("../../proof_data/risc0").expect("Failed to create proof_data/sp1");
+    let mut proof_file =
+        std::fs::File::create(PROOF_FILE_PATH).expect("Failed to create SP1 elf file");
+    let mut image_id_file =
+        std::fs::File::create(IMAGE_ID_FILE_PATH).expect("Failed to create SP1 elf file");
+    let mut public_input_file =
+        std::fs::File::create(PUBLIC_INPUT_FILE_PATH).expect("Failed to create SP1 elf file");
+    proof_file
+        .write_all(&serialized)
+        .expect("Failed write Risc0 proof to file");
+    image_id_file
+        .write_all(&convert(&METHOD_ID))
+        .expect("Failed write Risc0 image id to file");
+    public_input_file
+        .write_all(&receipt.journal.bytes)
+        .expect("Failed write Risc0 image id to file");
 }
 
 pub fn convert(data: &[u32; 8]) -> [u8; 32] {
