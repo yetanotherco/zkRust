@@ -162,29 +162,38 @@ fn copy_dependencies(toml_path: &str, guest_toml_path: &str) {
 
 pub fn prepare_workspace(
     guest_path: &str,
-    program_src_dir: &str,
+    workspace_guest_dir: &str,
     program_toml_dir: &str,
-    host_src_dir: &str,
+    workspace_host_dir: &str,
     host_toml_dir: &str,
     base_host_toml_dir: &str,
     base_guest_toml_dir: &str,
 ) -> io::Result<()> {
-    if let Err(e) = fs::remove_dir_all(program_src_dir) {
+    let workspace_guest_src_dir = format!("{}/src/", workspace_guest_dir);
+    let workspace_host_src_dir = format!("{}/src/", workspace_host_dir);
+    if let Err(e) = fs::remove_dir_all(&workspace_guest_src_dir) {
+        if e.kind() != ErrorKind::NotFound {
+            return Err(e);
+        }
+    }
+    if let Err(e) = fs::remove_dir_all(&workspace_host_src_dir) {
         if e.kind() != ErrorKind::NotFound {
             return Err(e);
         }
     }
     // Copy src/ directory
     let src_dir_path = format!("{}/src/", guest_path);
-    copy_dir_all(&src_dir_path, program_src_dir)?;
-    copy_dir_all(&src_dir_path, host_src_dir)?;
+    copy_dir_all(&src_dir_path, workspace_guest_src_dir)?;
+    copy_dir_all(&src_dir_path, workspace_host_src_dir)?;
 
     //TODO: copy this to one directory up....
     // Copy lib/ if present
     let lib_dir_path = format!("{}/lib/", guest_path);
     if Path::new(&lib_dir_path).exists() {
-        copy_dir_all(&lib_dir_path, program_src_dir)?;
-        copy_dir_all(&lib_dir_path, host_src_dir)?;
+        let workspace_guest_lib_dir = format!("{}/lib/", workspace_guest_dir);
+        let workspace_host_lib_dir = format!("{}/lib/", workspace_host_dir);
+        copy_dir_all(&lib_dir_path, workspace_guest_lib_dir)?;
+        copy_dir_all(&lib_dir_path, workspace_host_lib_dir)?;
     }
 
     // Copy Cargo.toml for zkVM
@@ -288,14 +297,9 @@ pub fn validate_directory_structure(root: &str) -> anyhow::Result<()> {
 
     // Check if src/ and lib/ directories exist
     let src_dir = root.join("src");
-    let lib_dir = root.join("lib");
 
     if !src_dir.exists() {
         return Err(anyhow!("src/ directory not found in root"));
-    }
-
-    if !lib_dir.exists() {
-        return Err(anyhow!("lib/ directory not found in root."));
     }
 
     // Check if src/ contains main.rs file

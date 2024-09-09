@@ -8,7 +8,7 @@ use crate::utils;
 
 /// SP1 workspace directories
 pub const SP1_SCRIPT_DIR: &str = "./workspaces/sp1/script";
-pub const SP1_SRC_DIR: &str = "./workspaces/sp1/program/src";
+pub const SP1_SRC_DIR: &str = "./workspaces/sp1/program";
 pub const SP1_GUEST_MAIN: &str = "./workspaces/sp1/program/src/main.rs";
 pub const SP1_HOST_MAIN: &str = "./workspaces/sp1/script/src/main.rs";
 pub const SP1_BASE_GUEST_CARGO_TOML: &str = "./workspaces/base_files/sp1/cargo_guest";

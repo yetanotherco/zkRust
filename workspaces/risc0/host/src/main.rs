@@ -8,7 +8,6 @@ const IMAGE_ID_FILE_PATH: &str = "../../proof_data/risc0/risc0.imageid";
 const PUBLIC_INPUT_FILE_PATH: &str = "../../proof_data/risc0/risc0_pub_input.pub";
 
 fn main() {
-    // Initialize tracing. In order to view logs, run `RUST_LOG=info cargo run`
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .init();

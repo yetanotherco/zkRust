@@ -1,6 +1,8 @@
+use crate::utils::{get_light_blocks, verify_blocks};
 use tendermint_light_client_verifier::{
     options::Options, types::LightBlock, ProdVerifier, Verdict, Verifier,
 };
+mod utils;
 use zk_rust_io;
 
 pub fn main() {
@@ -64,4 +66,29 @@ pub fn main() {
         }
         v => panic!("expected success, got: {:?}", v),
     }
+}
+
+pub fn input() {
+    let (light_block_1, light_block_2) = get_light_blocks();
+
+    let expected_verdict = verify_blocks(light_block_1.clone(), light_block_2.clone());
+
+    let encoded_1 = serde_cbor::to_vec(&light_block_1).unwrap();
+    let encoded_2 = serde_cbor::to_vec(&light_block_2).unwrap();
+
+    zk_rust_io::write(&encoded_1);
+    zk_rust_io::write(&encoded_2);
+}
+
+pub fn output() {
+    let (light_block_1, light_block_2) = get_light_blocks();
+    // Verify the public values
+    let mut expected_public_values: Vec<u8> = Vec::new();
+    expected_public_values.extend(light_block_1.signed_header.header.hash().as_bytes());
+    expected_public_values.extend(light_block_2.signed_header.header.hash().as_bytes());
+    expected_public_values.extend(serde_cbor::to_vec(&expected_verdict).unwrap());
+
+    let public_inputs: Vec<u8> = zk_rust_io::out();
+
+    assert_eq!(public_inputs.as_ref(), expected_public_values);
 }

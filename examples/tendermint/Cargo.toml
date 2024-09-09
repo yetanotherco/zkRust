@@ -8,7 +8,7 @@ publish = false
 [dependencies]
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
-zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", branch = "io" }
+zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", branch = "feat/v2" }
 tendermint-light-client-verifier = { version = "0.39.1", default-features = false, features = [
     "rust-crypto",
 ] }

@@ -1,20 +1,30 @@
-use serde_json::Value;
+use lib::{Account, Transaction};
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Transaction {
-    pub from: String,
-    pub to: String,
-    pub amount: u32,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Account {
-    pub account_name: String,
-    pub balance: u32,
-}
+use serde_json::Value;
 
 fn main() {
+    let data_str: String = zk_rust_io::read();
+    let key: String = zk_rust_io::read();
+
+    // read custom struct example inputs.
+    let mut old_account_state: Account = zk_rust_io::read();
+    let txs: Vec<Transaction> = zk_rust_io::read();
+
+    let v: Value = serde_json::from_str(&data_str).unwrap();
+    println!("net_worth {:?}", v[key]);
+
+    let new_account_state = &mut old_account_state;
+    for tx in txs {
+        if tx.from == new_account_state.account_name {
+            new_account_state.balance -= tx.amount;
+        }
+        if tx.to == new_account_state.account_name {
+            new_account_state.balance += tx.amount;
+        }
+    }
+}
+
+fn input() {
     let data_str = r#"
     {
         "name": "Jane Doe",
@@ -41,16 +51,16 @@ fn main() {
         },
     ];
 
-    let v: Value = serde_json::from_str(&data_str).unwrap();
-    println!("net_worth {:?}", v[key]);
+    zk_rust_io::write(&data_str);
+    zk_rust_io::write(&key);
+    zk_rust_io::write(&account_state);
+    zk_rust_io::write(&txs);
+}
 
-    let new_account_state = &mut account_state;
-    for tx in txs {
-        if tx.from == new_account_state.account_name {
-            new_account_state.balance -= tx.amount;
-        }
-        if tx.to == new_account_state.account_name {
-            new_account_state.balance += tx.amount;
-        }
-    }
+fn output() {
+    let account_state: Account = zk_rust_io::read();
+    println!(
+        "Final account state: {}",
+        serde_json::to_string(&account_state).unwrap()
+    );
 }

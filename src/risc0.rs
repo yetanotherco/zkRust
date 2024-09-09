@@ -8,7 +8,7 @@ use crate::utils;
 
 /// RISC0 workspace directories
 pub const RISC0_WORKSPACE_DIR: &str = "./workspaces/risc0/";
-pub const RISC0_SRC_DIR: &str = "./workspaces/risc0/methods/guest/src";
+pub const RISC0_SRC_DIR: &str = "./workspaces/risc0/methods/guest";
 pub const RISC0_GUEST_MAIN: &str = "./workspaces/risc0/methods/guest/src/main.rs";
 pub const RISC0_HOST_MAIN: &str = "./workspaces/risc0/host/src/main.rs";
 pub const RISC0_BASE_HOST_CARGO_TOML: &str = "./workspaces/base_files/risc0/cargo_host";
