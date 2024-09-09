@@ -174,13 +174,12 @@ pub fn prepare_workspace(
             return Err(e);
         }
     }
-    fs::create_dir_all(program_src_dir)?;
-    fs::create_dir_all(host_src_dir)?;
     // Copy src/ directory
     let src_dir_path = format!("{}/src/", guest_path);
     copy_dir_all(&src_dir_path, program_src_dir)?;
     copy_dir_all(&src_dir_path, host_src_dir)?;
 
+    //TODO: copy this to one directory up....
     // Copy lib/ if present
     let lib_dir_path = format!("{}/lib/", guest_path);
     if Path::new(&lib_dir_path).exists() {
