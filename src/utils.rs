@@ -307,7 +307,7 @@ pub fn validate_directory_structure(root: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn format_guest(
+pub fn prepare_guest(
     imports: &str,
     main_func_code: &str,
     program_header: &str,

@@ -4,11 +4,10 @@ use std::{
     process::{Command, ExitStatus},
 };
 
-use crate::utils::{self, format_guest};
+use crate::utils;
 
 /// SP1 workspace directories
 pub const SP1_SCRIPT_DIR: &str = "./workspaces/sp1/script";
-pub const SP1_GUEST_DIR: &str = "./workspaces/sp1/program/";
 pub const SP1_SRC_DIR: &str = "./workspaces/sp1/program/src";
 pub const SP1_GUEST_MAIN: &str = "./workspaces/sp1/program/src/main.rs";
 pub const SP1_HOST_MAIN: &str = "./workspaces/sp1/script/src/main.rs";
@@ -36,43 +35,6 @@ pub const SP1_HOST_READ: &str = "proof.public_values.read();";
 // Guest
 pub const SP1_IO_READ: &str = "sp1_zkvm::io::read();";
 pub const SP1_IO_COMMIT: &str = "sp1_zkvm::io::commit";
-
-//TODO: eliminate dedup w/ risc0
-/// this function mainly adds this header to the guest in order for it to be proven by
-/// sp1:
-///
-///    #![no_main]
-///    sp1_zkvm::entrypoint!(main);
-///
-pub fn prepare_guest(imports: &str, main_func_code: &str) -> io::Result<()> {
-    /*
-    let mut guest_program = SP1_GUEST_PROGRAM_HEADER.to_string();
-    guest_program.push_str(imports);
-    guest_program.push_str("pub fn main() {\n");
-    guest_program.push_str(main_func_code);
-    guest_program.push_str("\n}");
-
-    // Replace zkRust::read()
-    let guest_program = guest_program.replace(utils::IO_READ, SP1_IO_READ);
-
-    // Replace zkRust::commit()
-    let guest_program = guest_program.replace(utils::IO_COMMIT, SP1_IO_COMMIT);
-
-    // Write to guest
-    let mut file = fs::File::create(SP1_GUEST_MAIN)?;
-    file.write_all(guest_program.as_bytes())?;
-    Ok(())
-    */
-    format_guest(
-        imports,
-        main_func_code,
-        SP1_GUEST_PROGRAM_HEADER,
-        SP1_IO_READ,
-        SP1_IO_COMMIT,
-        SP1_GUEST_MAIN,
-    )?;
-    Ok(())
-}
 
 pub fn prepare_host(input: &str, output: &str, imports: &str) -> io::Result<()> {
     let mut host_program = imports.to_string();

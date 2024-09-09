@@ -75,7 +75,7 @@ fn main() -> anyhow::Result<()> {
                             #![no_main]
                             sp1_zkvm::entrypoint!(main);
                     */
-                    utils::format_guest(
+                    utils::prepare_guest(
                         &imports,
                         &function_bodies[0],
                         sp1::SP1_GUEST_PROGRAM_HEADER,
@@ -160,7 +160,7 @@ fn main() -> anyhow::Result<()> {
                             #![no_main]
                             risc0_zkvm::guest::entry!(main);
                     */
-                    utils::format_guest(
+                    utils::prepare_guest(
                         &imports,
                         &function_bodies[0],
                         risc0::RISC0_GUEST_PROGRAM_HEADER,
