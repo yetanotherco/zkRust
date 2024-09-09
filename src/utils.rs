@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use regex::Regex;
 use std::{
     fs::{self, File, OpenOptions},
@@ -18,7 +19,7 @@ pub const IO_COMMIT: &str = "zk_rust_io::commit";
 pub const OUTPUT_FUNC: &str = r"pub fn output() {";
 pub const INPUT_FUNC: &str = r"pub fn input() {";
 
-pub fn prepend_to_file(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
+pub fn prepend(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
     // Open the file in read mode to read its existing content
     let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
 
@@ -136,7 +137,6 @@ pub fn extract_function_bodies(file_path: &str, functions: Vec<String>) -> io::R
     Ok(extracted_codes)
 }
 
-//TODO: make this smarter -> end if next '[' found?
 fn copy_dependencies(toml_path: &str, guest_toml_path: &str) {
     let mut toml = std::fs::File::open(toml_path).unwrap();
     let mut content = String::new();
@@ -155,7 +155,7 @@ fn copy_dependencies(toml_path: &str, guest_toml_path: &str) {
         // Write the text after the search string to the output file
         guest_toml.write_all(dependencies.as_bytes()).unwrap();
     } else {
-        println!("Failed to copy dependencies in Guest Toml file, plese check");
+        println!("Failed to copy dependencies in Guest Cargo.toml file, plese check");
     }
 }
 
@@ -175,41 +175,28 @@ pub fn prepare_workspace(
     }
     fs::create_dir_all(program_src_dir)?;
     fs::create_dir_all(host_src_dir)?;
-    let program_path = format!("{}/src/", guest_path);
-    copy_dir_all(&program_path, program_src_dir)?;
-    copy_dir_all(&program_path, host_src_dir)?;
+    // Copy src/ directory
+    let src_dir_path = format!("{}/src/", guest_path);
+    copy_dir_all(&src_dir_path, program_src_dir)?;
+    copy_dir_all(&src_dir_path, host_src_dir)?;
+
+    // Copy lib/ if present
+    let lib_dir_path = format!("{}/lib/", guest_path);
+    if Path::new(&lib_dir_path).exists() {
+        copy_dir_all(&lib_dir_path, program_src_dir)?;
+        copy_dir_all(&lib_dir_path, host_src_dir)?;
+    }
+
+    // Copy Cargo.toml for zkVM
     fs::copy(base_guest_toml_dir, program_toml_dir)?;
     fs::copy(base_host_toml_dir, host_toml_dir)?;
+
+    // Select dependencies from the
     let toml_path = format!("{}/Cargo.toml", guest_path);
     copy_dependencies(&toml_path, program_toml_dir);
     copy_dependencies(&toml_path, host_toml_dir);
 
     Ok(())
-}
-
-// todo -> extract using regex
-pub fn extract_till_last_occurence(
-    file_path: &str,
-    search: &str,
-    start: &str,
-    end: &str,
-) -> io::Result<Option<String>> {
-    let mut contents = String::new();
-    fs::File::open(file_path)?.read_to_string(&mut contents)?;
-    // Find the position of the search string
-    if let Some(search_pos) = contents.find(search) {
-        // Find the position of the first 'start' after the search string
-        if let Some(start_pos) = contents[search_pos..].find(start) {
-            let start_pos = search_pos + start_pos;
-            // Find the position of the last 'end' after the opening 'start'
-            if let Some(end_pos) = contents[start_pos..].rfind(end) {
-                let end_pos = start_pos + end_pos;
-                // Extract and return the substring between 'start' and the last occurence 'end'
-                return Ok(Some(contents[start_pos + 1..end_pos].to_string()));
-            }
-        }
-    }
-    Ok(None)
 }
 
 //TODO: refactor this to eliminate the clone at each step.
@@ -288,5 +275,60 @@ pub fn remove_lines(file_path: &str, target: &str) -> io::Result<()> {
         writeln!(file, "{}", line)?;
     }
 
+    Ok(())
+}
+
+pub fn validate_directory_structure(root: &str) -> anyhow::Result<()> {
+    let root = Path::new(root);
+    // Check if Cargo.toml exists in the root directory
+    let cargo_toml = root.join("Cargo.toml");
+    if !cargo_toml.exists() {
+        return Err(anyhow!("Cargo.toml not found."));
+    }
+
+    // Check if src/ and lib/ directories exist
+    let src_dir = root.join("src");
+    let lib_dir = root.join("lib");
+
+    if !src_dir.exists() {
+        return Err(anyhow!("src/ directory not found in root"));
+    }
+
+    if !lib_dir.exists() {
+        return Err(anyhow!("lib/ directory not found in root."));
+    }
+
+    // Check if src/ contains main.rs file
+    let main_rs = src_dir.join("main.rs");
+    if !main_rs.exists() {
+        return Err(anyhow!("main.rs not found in src/ directory in root"));
+    }
+
+    Ok(())
+}
+
+pub fn format_guest(
+    imports: &str,
+    main_func_code: &str,
+    program_header: &str,
+    io_read_header: &str,
+    io_commit_header: &str,
+    guest_main_file_path: &str,
+) -> io::Result<()> {
+    let mut guest_program = program_header.to_string();
+    guest_program.push_str(imports);
+    guest_program.push_str("pub fn main() {\n");
+    guest_program.push_str(main_func_code);
+    guest_program.push_str("\n}");
+
+    // Replace zkRust::read()
+    let guest_program = guest_program.replace(IO_READ, io_read_header);
+
+    // Replace zkRust::commit()
+    let guest_program = guest_program.replace(IO_COMMIT, io_commit_header);
+
+    // Write to guest
+    let mut file = fs::File::create(guest_main_file_path)?;
+    file.write_all(guest_program.as_bytes())?;
     Ok(())
 }

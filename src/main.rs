@@ -1,7 +1,8 @@
 use aligned_sdk::core::types::ProvingSystemId;
 use clap::{Args, Parser, Subcommand};
 use log::info;
-use std::io;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::PathBuf;
 use zkRust::risc0;
 use zkRust::sp1;
@@ -15,8 +16,6 @@ struct Cli {
     #[command(subcommand)]
     command: Commands,
 }
-
-// Add flags that specify using proof system specific patches such as rand, sha, etc.
 
 #[derive(Subcommand)]
 enum Commands {
@@ -36,7 +35,7 @@ struct ProofArgs {
     precompiles: bool,
 }
 
-fn main() -> io::Result<()> {
+fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::parse();
 
@@ -45,146 +44,170 @@ fn main() -> io::Result<()> {
             info!("proving with sp1, program in: {}", args.guest_path);
 
             // Perform sanitation checks on directory
+            match utils::validate_directory_structure(&args.guest_path) {
+                Ok(_) => {
+                    //TODO: to add input to the guest we need to modify the host....
+                    utils::prepare_workspace(
+                        &args.guest_path,
+                        sp1::SP1_SRC_DIR,
+                        sp1::SP1_GUEST_CARGO_TOML,
+                        "./workspaces/sp1/script/src",
+                        "./workspaces/sp1/script/Cargo.toml",
+                        sp1::SP1_BASE_HOST_CARGO_TOML,
+                        sp1::SP1_BASE_GUEST_CARGO_TOML,
+                    )?;
 
-            //TODO: to add input to the guest we need to modify the host....
-            //TODO: remove redundant writes to the guest
-            utils::prepare_workspace(
-                &args.guest_path,
-                sp1::SP1_SRC_DIR,
-                sp1::SP1_GUEST_CARGO_TOML,
-                "./workspaces/sp1/script/src",
-                "./workspaces/sp1/script/Cargo.toml",
-                sp1::SP1_BASE_HOST_CARGO_TOML,
-                sp1::SP1_BASE_GUEST_CARGO_TOML,
-            )?;
-            //TODO -> this is currently needed to prevent writing over the function... once directory validation is fixed this can be removed
-            std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
-
-            //TODO: fetch these from program directory file.......
-            let imports = utils::get_imports(sp1::SP1_GUEST_MAIN).unwrap();
-            let function_bodies = utils::extract_function_bodies(
-                sp1::SP1_GUEST_MAIN,
-                vec![
-                    "pub fn main()".to_string(),
-                    "pub fn input()".to_string(),
-                    "pub fn output()".to_string(),
-                ],
-            )
-            .unwrap();
-            sp1::prepare_guest(&imports, &function_bodies[0])?;
-            sp1::prepare_host(&function_bodies[1], &function_bodies[2], &imports)?;
-
-            // TODO: append to end of cargo toml -> No insertion
-            if args.precompiles {
-                utils::insert(
-                    sp1::SP1_GUEST_CARGO_TOML,
-                    sp1::SP1_ACCELERATION_IMPORT,
-                    "[workspace]",
-                )
-                .unwrap();
-            }
-
-            if sp1::generate_sp1_proof()?.success() {
-                info!("sp1 proof and ELF generated");
-
-                utils::replace(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "")
-                    .unwrap();
-
-                // Submit to aligned
-                if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
-                    submit_proof_to_aligned(
-                        keystore_path,
-                        sp1::SP1_PROOF_PATH,
-                        sp1::SP1_ELF_PATH,
-                        None,
-                        ProvingSystemId::SP1,
+                    //TODO: fetch these from program directory file.......
+                    let imports = utils::get_imports(sp1::SP1_GUEST_MAIN).unwrap();
+                    let function_bodies = utils::extract_function_bodies(
+                        sp1::SP1_GUEST_MAIN,
+                        vec![
+                            "pub fn main()".to_string(),
+                            "pub fn input()".to_string(),
+                            "pub fn output()".to_string(),
+                        ],
                     )
                     .unwrap();
-                    info!("sp1 proof submitted and verified on aligned");
+                    /*
+                        Adds header to the guest & replace I/O imports
+                        risc0:
+
+                            #![no_main]
+                            sp1_zkvm::entrypoint!(main);
+                    */
+                    utils::format_guest(
+                        &imports,
+                        &function_bodies[0],
+                        sp1::SP1_GUEST_PROGRAM_HEADER,
+                        sp1::SP1_IO_READ,
+                        sp1::SP1_IO_COMMIT,
+                        sp1::SP1_GUEST_MAIN,
+                    )?;
+                    sp1::prepare_host(&function_bodies[1], &function_bodies[2], &imports)?;
+
+                    if args.precompiles {
+                        let mut toml_file = OpenOptions::new()
+                            .append(true) // Open the file in append mode
+                            .open(sp1::SP1_GUEST_CARGO_TOML)?;
+
+                        writeln!(toml_file, "{}", sp1::SP1_ACCELERATION_IMPORT)?;
+                    }
+
+                    if sp1::generate_sp1_proof()?.success() {
+                        info!("sp1 proof and ELF generated");
+
+                        utils::replace(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "")
+                            .unwrap();
+
+                        // Submit to aligned
+                        if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                            submit_proof_to_aligned(
+                                keystore_path,
+                                sp1::SP1_PROOF_PATH,
+                                sp1::SP1_ELF_PATH,
+                                None,
+                                ProvingSystemId::SP1,
+                            )
+                            .unwrap();
+                            info!("sp1 proof submitted and verified on aligned");
+                        }
+
+                        // Clear host & guest
+                        std::fs::copy(sp1::SP1_BASE_HOST_FILE, sp1::SP1_HOST_MAIN).unwrap();
+
+                        return Ok(());
+                    }
+                    info!("SP1 proof generation failed");
+                    // Clear host
+                    std::fs::copy(sp1::SP1_BASE_HOST_FILE, sp1::SP1_HOST_MAIN)?;
+                    return Ok(());
                 }
-
-                // Clear host & guest
-                std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
-
-                return Ok(());
+                Err(e) => return Err(e),
             }
-
-            info!("SP1 proof generation failed");
-            // Clear host
-            std::fs::copy(sp1::SP1_BASE_HOST, sp1::SP1_HOST_MAIN).unwrap();
-            Ok(())
         }
 
         Commands::ProveRisc0(args) => {
             info!("proving with risc0, program in: {}", args.guest_path);
 
             // Perform sanitation checks on directory
+            match utils::validate_directory_structure(&args.guest_path) {
+                Ok(_) => {
+                    utils::prepare_workspace(
+                        &args.guest_path,
+                        risc0::RISC0_SRC_DIR,
+                        risc0::RISC0_GUEST_CARGO_TOML,
+                        "./workspaces/risc0/host/src",
+                        "./workspaces/risc0/host/Cargo.toml",
+                        risc0::RISC0_BASE_HOST_CARGO_TOML,
+                        risc0::RISC0_BASE_GUEST_CARGO_TOML,
+                    )?;
 
-            //TODO: to add input to the guest we need to modify the host....
-            // This shouldn't be ridiculously hard if we get
-            utils::prepare_workspace(
-                &args.guest_path,
-                risc0::RISC0_SRC_DIR,
-                risc0::RISC0_GUEST_CARGO_TOML,
-                "./workspaces/risc0/host/src",
-                "./workspaces/risc0/host/Cargo.toml",
-                risc0::RISC0_BASE_HOST_CARGO_TOML,
-                risc0::RISC0_BASE_GUEST_CARGO_TOML,
-            )?;
-            //TODO -> this is currently needed to prevent writing over the function... once directory validation is fixed this can be removed
-            std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
-
-            let imports = utils::get_imports(risc0::RISC0_GUEST_MAIN).unwrap();
-            let function_bodies = utils::extract_function_bodies(
-                risc0::RISC0_GUEST_MAIN,
-                vec![
-                    "pub fn main()".to_string(),
-                    "pub fn input()".to_string(),
-                    "pub fn output()".to_string(),
-                ],
-            )
-            .unwrap();
-            risc0::prepare_guest(&imports, &function_bodies[0])?;
-            risc0::prepare_host(&function_bodies[1], &function_bodies[2], &imports)?;
-
-            // TODO: append to end of cargo toml -> No insertion
-            if args.precompiles {
-                utils::insert(
-                    risc0::RISC0_GUEST_CARGO_TOML,
-                    risc0::RISC0_ACCELERATION_IMPORT,
-                    "[workspace]",
-                )
-                .unwrap();
-            }
-
-            if risc0::generate_risc0_proof()?.success() {
-                info!("Risc0 proof and Image ID generated");
-
-                // Submit to aligned
-                if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
-                    submit_proof_to_aligned(
-                        keystore_path,
-                        risc0::PROOF_FILE_PATH,
-                        risc0::IMAGE_ID_FILE_PATH,
-                        Some(risc0::PUBLIC_INPUT_FILE_PATH),
-                        ProvingSystemId::Risc0,
+                    let imports = utils::get_imports(risc0::RISC0_GUEST_MAIN).unwrap();
+                    let function_bodies = utils::extract_function_bodies(
+                        risc0::RISC0_GUEST_MAIN,
+                        vec![
+                            "pub fn main()".to_string(),
+                            "pub fn input()".to_string(),
+                            "pub fn output()".to_string(),
+                        ],
                     )
                     .unwrap();
 
-                    info!("risc0 proof submitted and verified on aligned");
+                    /*
+                        Adds header to the guest & replace I/O imports
+                        risc0:
+
+                            #![no_main]
+                            risc0_zkvm::guest::entry!(main);
+                    */
+                    utils::format_guest(
+                        &imports,
+                        &function_bodies[0],
+                        risc0::RISC0_GUEST_PROGRAM_HEADER,
+                        risc0::RISC0_IO_READ,
+                        risc0::RISC0_IO_COMMIT,
+                        risc0::RISC0_GUEST_MAIN,
+                    )?;
+                    risc0::prepare_host(&function_bodies[1], &function_bodies[2], &imports)?;
+
+                    if args.precompiles {
+                        let mut toml_file = OpenOptions::new()
+                            .append(true)
+                            .open(risc0::RISC0_GUEST_CARGO_TOML)?;
+
+                        writeln!(toml_file, "{}", risc0::RISC0_ACCELERATION_IMPORT)?;
+                    }
+
+                    if risc0::generate_risc0_proof()?.success() {
+                        info!("Risc0 proof and Image ID generated");
+
+                        // Submit to aligned
+                        if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                            submit_proof_to_aligned(
+                                keystore_path,
+                                risc0::PROOF_FILE_PATH,
+                                risc0::IMAGE_ID_FILE_PATH,
+                                Some(risc0::PUBLIC_INPUT_FILE_PATH),
+                                ProvingSystemId::Risc0,
+                            )
+                            .unwrap();
+
+                            info!("risc0 proof submitted and verified on aligned");
+                        }
+
+                        // Clear Host file
+                        std::fs::copy(risc0::RISC0_BASE_HOST_FILE, risc0::RISC0_HOST_MAIN).unwrap();
+
+                        return Ok(());
+                    }
+                    info!("Risc0 proof generation failed");
+
+                    // Clear Host file
+                    std::fs::copy(risc0::RISC0_BASE_HOST_FILE, risc0::RISC0_HOST_MAIN).unwrap();
+                    return Ok(());
                 }
-
-                // Clear Host file
-                std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
-
-                return Ok(());
+                Err(e) => return Err(e),
             }
-
-            info!("Risc0 proof generation failed");
-
-            // Clear Host file
-            std::fs::copy(risc0::RISC0_BASE_HOST, risc0::RISC0_HOST_MAIN).unwrap();
-            Ok(())
         }
     }
 }

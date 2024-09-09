@@ -1,11 +1,10 @@
 use std::{
-    collections::HashSet,
     fs,
     io::{self, Write},
     process::{Command, ExitStatus},
 };
 
-use crate::utils;
+use crate::utils::{self, format_guest};
 
 /// SP1 workspace directories
 pub const SP1_SCRIPT_DIR: &str = "./workspaces/sp1/script";
@@ -15,7 +14,8 @@ pub const SP1_GUEST_MAIN: &str = "./workspaces/sp1/program/src/main.rs";
 pub const SP1_HOST_MAIN: &str = "./workspaces/sp1/script/src/main.rs";
 pub const SP1_BASE_GUEST_CARGO_TOML: &str = "./workspaces/base_files/sp1/cargo_guest";
 pub const SP1_BASE_HOST_CARGO_TOML: &str = "./workspaces/base_files/sp1/cargo_host";
-pub const SP1_BASE_HOST: &str = "./workspaces/base_files/sp1/host";
+pub const SP1_BASE_HOST: &str = include_str!("../workspaces/base_files/sp1/host");
+pub const SP1_BASE_HOST_FILE: &str = "./workspaces/base_files/sp1/host";
 pub const SP1_GUEST_CARGO_TOML: &str = "./workspaces/sp1/program/Cargo.toml";
 
 // Proof data generation paths
@@ -38,13 +38,14 @@ pub const SP1_IO_READ: &str = "sp1_zkvm::io::read();";
 pub const SP1_IO_COMMIT: &str = "sp1_zkvm::io::commit";
 
 //TODO: eliminate dedup w/ risc0
-/// This function mainly adds this header to the guest in order for it to be proven by
+/// this function mainly adds this header to the guest in order for it to be proven by
 /// sp1:
 ///
 ///    #![no_main]
 ///    sp1_zkvm::entrypoint!(main);
 ///
 pub fn prepare_guest(imports: &str, main_func_code: &str) -> io::Result<()> {
+    /*
     let mut guest_program = SP1_GUEST_PROGRAM_HEADER.to_string();
     guest_program.push_str(imports);
     guest_program.push_str("pub fn main() {\n");
@@ -61,25 +62,35 @@ pub fn prepare_guest(imports: &str, main_func_code: &str) -> io::Result<()> {
     let mut file = fs::File::create(SP1_GUEST_MAIN)?;
     file.write_all(guest_program.as_bytes())?;
     Ok(())
+    */
+    format_guest(
+        imports,
+        main_func_code,
+        SP1_GUEST_PROGRAM_HEADER,
+        SP1_IO_READ,
+        SP1_IO_COMMIT,
+        SP1_GUEST_MAIN,
+    )?;
+    Ok(())
 }
 
-//TODO: Replace in string before writing to file.
-//TODO: Still find and replace in file.
-//TODO: in line this
 pub fn prepare_host(input: &str, output: &str, imports: &str) -> io::Result<()> {
-    utils::prepend_to_file(SP1_HOST_MAIN, &imports)?;
+    let mut host_program = imports.to_string();
+    host_program.push_str(SP1_BASE_HOST);
 
     // Insert input body
-    utils::insert(SP1_HOST_MAIN, &input, utils::HOST_INPUT)?;
+    let host_program = host_program.replace(utils::HOST_INPUT, input);
     // Insert output body
-    utils::insert(SP1_HOST_MAIN, &output, utils::HOST_OUTPUT)?;
-
-    //Remove imports of zk_rust_io
+    let host_program = host_program.replace(utils::HOST_OUTPUT, output);
 
     // replace zkRust::write
-    utils::replace(SP1_HOST_MAIN, utils::IO_WRITE, SP1_HOST_WRITE)?;
+    let host_program = host_program.replace(utils::IO_WRITE, SP1_HOST_WRITE);
     // replace zkRust::out()
-    utils::replace(SP1_HOST_MAIN, utils::IO_OUT, SP1_HOST_READ)?;
+    let host_program = host_program.replace(utils::IO_OUT, SP1_HOST_READ);
+
+    // Write to host
+    let mut file = fs::File::create(SP1_HOST_MAIN)?;
+    file.write_all(host_program.as_bytes())?;
     Ok(())
 }
 
