@@ -1,3 +1,4 @@
+use log::info;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -30,7 +31,7 @@ pub async fn submit_proof_and_wait_for_verification(
 
     match res {
         Some(aligned_verification_data) => {
-            println!(
+            info!(
                 "Proof submitted successfully on batch {}, waiting for verification...",
                 hex::encode(aligned_verification_data.batch_merkle_root)
             );
@@ -44,11 +45,11 @@ pub async fn submit_proof_and_wait_for_verification(
                 .await
                 .is_ok_and(|r| r)
                 {
-                    println!("Proof verified in Aligned!");
+                    info!("Proof verified in Aligned!");
                     return Ok(aligned_verification_data);
                 }
 
-                println!("Proof not verified yet. Waiting 10 seconds before checking again...");
+                info!("Proof not verified yet. Waiting 10 seconds before checking again...");
                 tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
             }
 
@@ -87,7 +88,7 @@ pub async fn pay_batcher(
         .map_err(|e| anyhow::anyhow!("Failed to submit tx {}", e))?
     {
         Some(receipt) => {
-            println!(
+            info!(
                 "Payment sent. Transaction hash: {:x}",
                 receipt.transaction_hash
             );
@@ -147,7 +148,7 @@ pub fn submit_proof_to_aligned(
         ))
         .expect("could not get nonce");
 
-    println!("Submitting proof to aligned for verification");
+    info!("Submitting proof to aligned for verification");
 
     runtime
         .block_on(submit_proof_and_wait_for_verification(

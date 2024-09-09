@@ -41,7 +41,7 @@ fn main() -> anyhow::Result<()> {
 
     match &cli.command {
         Commands::ProveSp1(args) => {
-            info!("proving with sp1, program in: {}", args.guest_path);
+            info!("Proving with SP1, program in: {}", args.guest_path);
 
             // Perform sanitation checks on directory
             match utils::validate_directory_structure(&args.guest_path) {
@@ -94,7 +94,7 @@ fn main() -> anyhow::Result<()> {
                     }
 
                     if sp1::generate_sp1_proof()?.success() {
-                        info!("sp1 proof and ELF generated");
+                        info!("SP1 proof and ELF generated");
 
                         utils::replace(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "")
                             .unwrap();
@@ -109,7 +109,7 @@ fn main() -> anyhow::Result<()> {
                                 ProvingSystemId::SP1,
                             )
                             .unwrap();
-                            info!("sp1 proof submitted and verified on aligned");
+                            info!("SP1 proof submitted and verified on aligned");
                         }
 
                         // Clear host & guest
@@ -127,7 +127,7 @@ fn main() -> anyhow::Result<()> {
         }
 
         Commands::ProveRisc0(args) => {
-            info!("proving with risc0, program in: {}", args.guest_path);
+            info!("Proving with Risc0, program in: {}", args.guest_path);
 
             // Perform sanitation checks on directory
             match utils::validate_directory_structure(&args.guest_path) {
@@ -192,7 +192,7 @@ fn main() -> anyhow::Result<()> {
                             )
                             .unwrap();
 
-                            info!("risc0 proof submitted and verified on aligned");
+                            info!("Risc0 proof submitted and verified on aligned");
                         }
 
                         // Clear Host file
