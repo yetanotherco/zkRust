@@ -114,6 +114,8 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
 
 ### Flags
 
+- `--io`: Enables proving in with user defined `input()` and `output()` functions which define code that is not proved within the zkVM but defines inputs to the zkVM and how 
+
 - `--precompiles`: Enables in acceleration via precompiles for supported zkVM's. Specifying this flag allows for VM specific speedups for specific expensive operations such as SHA256, SHA3, bigint multiplication, and ed25519 signature verification. By specifying this flag proving operations for specific operations within the following rust crates are accelerated:
     - SP1:
         - `sha2`
