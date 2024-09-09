@@ -30,7 +30,21 @@ struct ProofArgs {
     guest_path: String,
     output_proof_path: String,
     #[clap(long)]
-    submit_to_aligned_with_keystore: Option<PathBuf>,
+    submit_to_aligned: bool,
+    #[clap(long, default_value = "./keystore")]
+    keystore_path: Option<PathBuf>,
+    #[clap(
+        long,
+        default_value("https://ethereum-holesky-rpc.publicnode.com"),
+        required_if_eq("submit_to_aligned", "true")
+    )]
+    rpc_url: String,
+    #[clap(
+        long,
+        default_value("17000"),
+        required_if_eq("submit_to_aligned", "true")
+    )]
+    chain_id: u64,
     #[clap(long)]
     precompiles: bool,
 }
@@ -62,9 +76,9 @@ fn main() -> anyhow::Result<()> {
                     let function_bodies = utils::extract_function_bodies(
                         sp1::SP1_GUEST_MAIN,
                         vec![
-                            "pub fn main()".to_string(),
-                            "pub fn input()".to_string(),
-                            "pub fn output()".to_string(),
+                            "fn main()".to_string(),
+                            "fn input()".to_string(),
+                            "fn output()".to_string(),
                         ],
                     )
                     .unwrap();
@@ -100,12 +114,14 @@ fn main() -> anyhow::Result<()> {
                             .unwrap();
 
                         // Submit to aligned
-                        if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                        if args.submit_to_aligned {
                             submit_proof_to_aligned(
-                                keystore_path,
+                                &args.keystore_path.as_ref().unwrap(),
                                 sp1::SP1_PROOF_PATH,
                                 sp1::SP1_ELF_PATH,
                                 None,
+                                &args.rpc_url,
+                                &args.chain_id,
                                 ProvingSystemId::SP1,
                             )
                             .unwrap();
@@ -146,9 +162,9 @@ fn main() -> anyhow::Result<()> {
                     let function_bodies = utils::extract_function_bodies(
                         risc0::RISC0_GUEST_MAIN,
                         vec![
-                            "pub fn main()".to_string(),
-                            "pub fn input()".to_string(),
-                            "pub fn output()".to_string(),
+                            "fn main()".to_string(),
+                            "fn input()".to_string(),
+                            "fn output()".to_string(),
                         ],
                     )
                     .unwrap();
@@ -182,12 +198,14 @@ fn main() -> anyhow::Result<()> {
                         info!("Risc0 proof and Image ID generated");
 
                         // Submit to aligned
-                        if let Some(keystore_path) = args.submit_to_aligned_with_keystore.clone() {
+                        if args.submit_to_aligned {
                             submit_proof_to_aligned(
-                                keystore_path,
+                                &args.keystore_path.as_ref().unwrap(),
                                 risc0::PROOF_FILE_PATH,
                                 risc0::IMAGE_ID_FILE_PATH,
                                 Some(risc0::PUBLIC_INPUT_FILE_PATH),
+                                &args.rpc_url,
+                                &args.chain_id,
                                 ProvingSystemId::Risc0,
                             )
                             .unwrap();

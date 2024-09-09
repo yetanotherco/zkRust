@@ -3,13 +3,12 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use aligned_sdk::core::types::{AlignedVerificationData, Chain, ProvingSystemId, VerificationData};
-use aligned_sdk::sdk::{get_next_nonce, submit, verify_proof_onchain};
+use aligned_sdk::core::types::{Chain, ProvingSystemId, VerificationData};
+use aligned_sdk::sdk::{get_next_nonce, submit_and_wait_verification};
 use dialoguer::Confirm;
-use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
 use ethers::providers::{Http, Provider};
-use ethers::signers::{LocalWallet, Wallet};
+use ethers::signers::LocalWallet;
 use ethers::types::Address;
 
 pub mod risc0;
@@ -18,48 +17,6 @@ pub mod utils;
 
 const BATCHER_URL: &str = "wss://batcher.alignedlayer.com";
 const BATCHER_PAYMENTS_ADDRESS: &str = "0x815aeCA64a974297942D2Bbf034ABEe22a38A003";
-
-pub async fn submit_proof_and_wait_for_verification(
-    verification_data: VerificationData,
-    wallet: Wallet<SigningKey>,
-    rpc_url: String,
-    nonce: U256,
-) -> anyhow::Result<AlignedVerificationData> {
-    let res = submit(BATCHER_URL, &verification_data, wallet, nonce)
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to submit proof for verification: {:?}", e))?;
-
-    match res {
-        Some(aligned_verification_data) => {
-            info!(
-                "Proof submitted successfully on batch {}, waiting for verification...",
-                hex::encode(aligned_verification_data.batch_merkle_root)
-            );
-
-            for _ in 0..10 {
-                if verify_proof_onchain(
-                    &aligned_verification_data,
-                    Chain::Holesky,
-                    rpc_url.as_str(),
-                )
-                .await
-                .is_ok_and(|r| r)
-                {
-                    info!("Proof verified in Aligned!");
-                    return Ok(aligned_verification_data);
-                }
-
-                info!("Proof not verified yet. Waiting 10 seconds before checking again...");
-                tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
-            }
-
-            anyhow::bail!("Proof verification failed");
-        }
-        None => {
-            anyhow::bail!("Proof submission failed, no verification data");
-        }
-    }
-}
 
 pub async fn pay_batcher(
     from: Address,
@@ -100,11 +57,14 @@ pub async fn pay_batcher(
     }
 }
 
+//NOTE: we default to submitting to the testnet. When mainnet is live will make mainnet submission the default, testnet an option
 pub fn submit_proof_to_aligned(
-    keystore_path: PathBuf,
+    keystore_path: &PathBuf,
     proof_path: &str,
     elf_path: &str,
     pub_input_path: Option<&str>,
+    rpc_url: &str,
+    chain_id: &u64,
     proof_system_id: ProvingSystemId,
 ) -> anyhow::Result<()> {
     let keystore_password = rpassword::prompt_password("Enter keystore password: ")
@@ -118,8 +78,6 @@ pub fn submit_proof_to_aligned(
     let elf_data = std::fs::read(elf_path).expect("failed to read ELF");
     let pub_input = pub_input_path
         .map(|pub_input_path| std::fs::read(pub_input_path).expect("failed to read public input"));
-
-    let rpc_url = "https://ethereum-holesky-rpc.publicnode.com";
 
     let provider = Provider::<Http>::try_from(rpc_url).expect("Failed to connect to provider");
 
@@ -147,14 +105,22 @@ pub fn submit_proof_to_aligned(
             BATCHER_PAYMENTS_ADDRESS,
         ))
         .expect("could not get nonce");
+    let chain = match chain_id {
+        17000 => Chain::Holesky,
+        31337 => Chain::Devnet,
+        //We default to holesky
+        _ => Chain::Holesky,
+    };
 
     info!("Submitting proof to aligned for verification");
 
     runtime
-        .block_on(submit_proof_and_wait_for_verification(
-            verification_data,
+        .block_on(submit_and_wait_verification(
+            BATCHER_URL,
+            rpc_url,
+            chain,
+            &verification_data,
             wallet,
-            rpc_url.to_string(),
             nonce,
         ))
         .expect("failed to submit proof");

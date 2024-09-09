@@ -101,10 +101,11 @@ pub fn extract_function_bodies(file_path: &str, functions: Vec<String>) -> io::R
 
     // Find all start indices of the function signature
     for keyword in functions {
-        let start_index = code[index..].find(&keyword).unwrap();
-        let absolute_index = index + start_index;
-        start_indices.push(absolute_index);
-        index = absolute_index + keyword.len();
+        if let Some(start_index) = code[index..].find(&keyword) {
+            let absolute_index = index + start_index;
+            start_indices.push(absolute_index);
+            index = absolute_index + keyword.len();
+        }
     }
 
     // Extract the code for each function
