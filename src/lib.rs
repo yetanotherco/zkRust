@@ -122,6 +122,7 @@ pub fn submit_proof_to_aligned(
             &verification_data,
             wallet,
             nonce,
+            BATCHER_PAYMENTS_ADDRESS,
         ))
         .expect("failed to submit proof");
     Ok(())
