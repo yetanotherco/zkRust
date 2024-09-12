@@ -1,8 +1,0 @@
-[workspace]
-[package]
-version = "0.1.0"
-name = "method"
-edition = "2021"
-
-[dependencies]
-sp1-zkvm = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.1.1" }
