@@ -3,11 +3,7 @@ target
 .tmp_guest
 .tmp_guest/*
 
-workspaces/risc0/target
-workspaces/risc0/host/*
-workspaces/risc0/methods/guest/*
-workspaces/sp1/program/*
-workspaces/sp1/script/*
+workspaces/*
 
 proof_data/sp1/*
 !proof_data/sp1/.gitkeep
