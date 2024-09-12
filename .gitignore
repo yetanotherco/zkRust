@@ -4,6 +4,7 @@ target
 .tmp_guest/*
 
 workspaces/*
+!workspaces/base_files/
 
 proof_data/sp1/*
 !proof_data/sp1/.gitkeep
