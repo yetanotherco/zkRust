@@ -1,4 +1,4 @@
-install: install_risc0 install_sp1
+install: install_sp1 install_risc0 
 
 install_risc0:
 	@curl -L https://risczero.com/install | bash

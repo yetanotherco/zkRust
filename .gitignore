@@ -5,6 +5,8 @@ target
 
 workspaces/*
 !workspaces/base_files/
+!workspaces/risc0/
+!workspaces/sp1/
 
 proof_data/sp1/*
 !proof_data/sp1/.gitkeep
