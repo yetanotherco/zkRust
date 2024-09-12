@@ -28,10 +28,9 @@ enum Commands {
 #[derive(Args, Debug)]
 struct ProofArgs {
     guest_path: String,
-    output_proof_path: String,
     #[clap(long)]
     submit_to_aligned: bool,
-    #[clap(long, default_value = "./keystore")]
+    #[clap(long, default_value = "~/keystore")]
     keystore_path: Option<PathBuf>,
     #[clap(
         long,
