@@ -113,20 +113,13 @@ pub fn extract_function_bodies(file_path: &str, functions: Vec<String>) -> io::R
     for &start_index in &start_indices {
         if let Some(start_brace_index) = code[start_index..].find('{') {
             let start_brace_index = start_index + start_brace_index;
-            let mut stack = vec!['{'];
+            let mut stack = vec!["{"];
             let mut end_index = start_brace_index;
 
             for (i, ch) in code[start_brace_index + 1..].chars().enumerate() {
-                match ch {
-                    '{' => stack.push('{'),
-                    '}' => {
-                        stack.pop();
-                        if stack.is_empty() {
-                            end_index = start_brace_index + 1 + i;
-                            break;
-                        }
-                    }
-                    _ => {}
+                if handle_stack(ch, &mut stack) {
+                    end_index = start_brace_index + 1 + i;
+                    break;
                 }
             }
 
@@ -136,6 +129,101 @@ pub fn extract_function_bodies(file_path: &str, functions: Vec<String>) -> io::R
     }
 
     Ok(extracted_codes)
+}
+
+// Function that handles the stack and status when parsing the file to extract_function_bodies 
+fn handle_stack(ch: char, stack: &mut Vec<&str>) -> bool {
+    match stack.last() {
+        Some(&"{") => {
+            return handle_char(ch, stack)
+        }
+        Some(&"/") => {
+            match ch {
+                '/' => {
+                    stack.pop();
+                    stack.push("//comment");
+                }
+                '*' => {
+                    stack.pop();
+                    stack.push("/*comment*\\");
+                }
+                _ => {
+                    stack.pop();
+                    handle_char(ch, stack);
+                }
+            }
+        }
+        Some(&"//comment") => {
+            match ch {
+                '\n' => {
+                    stack.pop();
+                }
+                _ => {}
+            }
+        }
+        Some(&"/*comment*\\") => {
+            match ch {
+                '*' => {
+                    stack.push("*");
+                }
+                _ => {}
+            }
+        }
+        Some(&"*") => {
+            match ch {
+                '/' => {
+                    stack.pop(); //pop("*")
+                    stack.pop(); //pop("/*comment*\\")
+                }
+                _ => {
+                    stack.pop(); //pop("*"), back to "/*comment*\\"
+                }
+            }
+        }
+        Some(&"\"string\"") => {
+            match ch {
+                '\"' => {
+                    stack.pop();
+                }
+                _ => {}
+            }
+        }
+        Some(&"\'c\'") => {
+            match ch {
+                '\'' => {
+                    stack.pop();
+                }
+                _ => {}
+            }
+        }
+        _ => {}
+    }
+    return false;
+}
+// Function to handle characters when in normal status of the stack
+fn handle_char (ch: char, stack: &mut Vec<&str>) -> bool {
+    match ch {
+        '/' => {
+            stack.push("/");
+        }
+        '{' => {
+            stack.push("{")
+        }
+        '}' => {
+            stack.pop();
+            if stack.is_empty() {
+                return true;
+            }
+        }
+        '\"' => {
+            stack.push("\"string\"");
+        }
+        '\'' => {
+            stack.push("\'c\'");
+        }
+        _ => {}
+    }
+    return false;
 }
 
 fn copy_dependencies(toml_path: &str, guest_toml_path: &str) {
