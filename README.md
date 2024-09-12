@@ -1,8 +1,8 @@
 # zkRust
 
-CLI tool to prove your rust code easily using either SP1 or Risc0.
+`zkRust` is a CLI tool to simplify the developing applications in Rust using zkVM's such as SP1 or Risc0.
 
-zkRust supports generating proofs for executable scripts. Specifically, zkRust supports generating proofs for executable programs with inputs, code, and outputs known at compile time and defined within a `main()` function and `main.rs` file.
+zkRust seeks to simplify the development experience of developing using zkVM's and enable developers by providing the choice of which zkVM they would like to develop with and eliminating redundancy in the Zk Application development process.
 
 ## Installation:
 
@@ -20,12 +20,15 @@ curl -L https://raw.githubusercontent.com/yetanotherco/zkRust/main/install_zkrus
 
 ## Quickstart
 
-You can test zkRust for any of the examples in the `examples` folder. This include:
+You can test zkRust for any of the examples in the `examples` folder. This include programs for:
 
-- a Fibonacci program
-- a RSA program
-- an ECDSA program
-- a simple blockchain state diff program
+- Computing and reading the results of computing Fibonacci numbers.
+- Performing RSA key verification.
+- Performing ECDSA program.
+- a blockchain state diff program verification.
+- Computing the Sha256 hash of a value.
+- Verifying a tendermint block.
+- Interacting with a user to answer a quiz.
 
 Run one of the following commands to test zkRust. You can choose either risc0 or sp1:
 
@@ -121,18 +124,17 @@ make prove_sp1_zkquiz
 
 ## Usage:
 
-To use zkRust, define the code you would like to generate a proof for in a `fn main()` in a `main.rs` directory with the following structure:
+To use zkRust, To use zkRust users specify a `fn main()` whose execution is proven within the zkVM. This function must be defined within a `main.rs` file in a directory with the following structure:
 
 ```
 .
 └── <PROGRAM_DIRECTORY>
     ├── Cargo.toml
-    ├── lib/
     └── src
         └── main.rs
 ```
 
-For using more complex workspaces write and import a separate lib/ crate into the .
+For using more complex programs you can import a separate lib/ crate into the .
 
 ```
 .
@@ -140,12 +142,12 @@ For using more complex workspaces write and import a separate lib/ crate into th
     ├── Cargo.toml
     ├── lib/
     └── src
-        ├── main.rs
         └── lib
-            └── ...
 ```
 
-To use zkRust users specify a `main()` whose execution is proven within the zkVM. The user may also define a `input()`, `output()`, in addition to the `main()` function which defines code that runs outside of the zkVM before and after the VM executes. The `input()` function executes before the zkVM code is executed and allows the user to define inputs passed to the vm such as a deserialized Tx or data fetched from an external source at runtime. Within the `main()` function the user may define information that will to written to a output buffer after proof generation. The `output()` then allows the user to read the information written to that buffer and perform post-processing of that data.
+The user may also define a `input()`, `output()`, in addition to the `main()`. The `fn input()` and `fn output()` function which defines code that runs outside of the zkVM before and after the VM executes. The `input()` function executes before the zkVM code is executed and allows the user to define inputs passed to the vm such as a deserialized Tx or data fetched from an external source at runtime. Within the `main()` (guest) function the user may write information from the computation performed in the zkVM to an output buffer to be used after proof generation. The `output()` defines code that allows the user to read the information written to that buffer of the and perform post-processing of that data.
+
+![](./assets/zkRust_execution_flow.png)
 
 The user may specify inputs into the VM (guest) code using `zk_rust_io::write()` as long on the type of rust object they are writing implements `Serializable`. Within there `main()` function (guest) the user may read in the inputs by specifying `zk_rust_io::read()` and output data computed during the execution phase of the code within the VM (guest) program by specifying `zk_rust_io::commit()`. To read the output of the output of the VM (guest) program you declare `zk_rust_io::out()`. The `zk_rust_io` crate defines function headers that are not inlined and are purely used as compile time symbols to ensure a user can compile there rust code before running it within one of the zkVM available in zkRust.
 
@@ -203,6 +205,8 @@ pub fn output() {
 }
 ```
 
+//NOTE ADD ANNOTATION ABOUT WRITTEN AND READING FROM BUFFER IN ONE call -> Otherwise issues.
+
 To generate a proof of the execution of your code run the following:
 
 - **Sp1**:
@@ -246,17 +250,20 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
 - `--precompiles`: Enables in acceleration via precompiles for supported zkVM's. Specifying this flag allows for VM specific speedups for specific expensive operations such as SHA256, SHA3, bigint multiplication, and ed25519 signature verification. By specifying this flag proving operations for specific operations within the following rust crates are accelerated:
 
   - SP1:
-    - `sha2`
-    - `sha3`
-    - `crypto-bigint`
-    - `tiny-keccak`
-    - `ed25519-consensus`
-    - `ecdsa-core`
-    - `secp256k1`
+
+    - sha2 v0.10.6
+    - sha3 v0.10.8
+    - crypto-bigint v0.5.5
+    - tiny-keccak v2.0.2
+    - ed25519-consensus v2.1.0
+    - ecdsa-core v0.16.9
+
   - Risc0:
-    - `sha2`
-    - `k256`
-    - `crypto-bigint`
+    - sha2 v0.10.6
+    - k256 v0.13.1
+    - crypto-bigint v0.5.5
+
+NOTE: for the precompiles to be included within the compilation step the crate version you are using must match the crate version above.
 
 # Acknowledgments:
 
