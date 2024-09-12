@@ -20,6 +20,14 @@ curl -L https://raw.githubusercontent.com/yetanotherco/zkRust/main/install_zkrus
 
 ## Quickstart
 
+To get started you can create a workspace for your project in zkRust by running:
+
+```sh
+cargo new <PROGRAM_DIRECTORY>
+```
+
+It's that simple.
+
 You can test zkRust for any of the examples in the `examples` folder. This include programs for:
 
 - Computing and reading the results of computing Fibonacci numbers.
@@ -150,6 +158,12 @@ The user may also define a `input()`, `output()`, in addition to the `main()`. T
 ![](./assets/zkRust_execution_flow.png)
 
 The user may specify inputs into the VM (guest) code using `zk_rust_io::write()` as long on the type of rust object they are writing implements `Serializable`. Within there `main()` function (guest) the user may read in the inputs by specifying `zk_rust_io::read()` and output data computed during the execution phase of the code within the VM (guest) program by specifying `zk_rust_io::commit()`. To read the output of the output of the VM (guest) program you declare `zk_rust_io::out()`. The `zk_rust_io` crate defines function headers that are not inlined and are purely used as compile time symbols to ensure a user can compile there rust code before running it within one of the zkVM available in zkRust.
+
+To use the I/O imports import the `zk_rust_io` crate by adding the following to the `Cargo.toml` in your project directory.
+
+```sh
+zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", version = "v0.1.0" }
+```
 
 ### input.rs
 
