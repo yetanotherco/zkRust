@@ -6,7 +6,7 @@ zkRust supports generating proofs for executable scripts. Specifically, zkRust s
 
 ## Installation:
 
-First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains from [risc0](https://github.com/risc0/risc0) and [sp1](https://github.com/succinctlabs/sp1) by running:
+First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains from [Risc0](https://github.com/risc0/risc0) and [SP1](https://github.com/succinctlabs/sp1) by running:
 
 ```sh
 make install
@@ -25,7 +25,7 @@ You can test zkRust for any of the examples in the `examples` folder. This inclu
 * an ECDSA program
 * a simple blockchain state diff program
 
-Run one of the following commands to test zkRust. You can choose either risc0 or sp1:
+Run one of the following commands to test zkRust. You can choose either Risc0 or SP1:
 
 **Fibonacci**:
 
@@ -82,7 +82,7 @@ To use zkRust, define the code you would like to generate a proof for in a `main
 
 To generate a proof of the execution of your code run the following:
 
-- **Sp1**:
+- **SP1**:
     ```sh
     cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH> .
     ```
@@ -94,7 +94,7 @@ To generate a proof of the execution of your code run the following:
 
 
 
-To generate your proof and send it to [Aligned Layer](https://github.com/yetanotherco/aligned_layer). First generate a local wallet keystore using `[cast](https://book.getfoundry.sh/cast/).
+To generate your proof and send it to [Aligned](https://github.com/yetanotherco/aligned_layer). First generate a local wallet keystore using [cast](https://book.getfoundry.sh/cast/).
 
 ```sh
 cast wallet new-mnemonic
@@ -129,7 +129,7 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
     NOTE: for the precompiles to be included within the compilation step the crate version you are using must match the crate version above.
 
 ## Limitations:
-Currently zkRust does not support fully support the following:
+Currently zkRust does not fully support the following:
 
 - Programs with a library structure.
 - VM user Input and Output
