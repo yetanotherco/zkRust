@@ -1,5 +1,6 @@
 use aligned_sdk::core::types::ProvingSystemId;
 use clap::{Args, Parser, Subcommand};
+use env_logger::Env;
 use log::info;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -30,26 +31,21 @@ struct ProofArgs {
     guest_path: String,
     #[clap(long)]
     submit_to_aligned: bool,
-    #[clap(long, default_value = "~/keystore")]
+    #[clap(long, required_if_eq("submit_to_aligned", "true"))]
     keystore_path: Option<PathBuf>,
-    #[clap(
-        long,
-        default_value("https://ethereum-holesky-rpc.publicnode.com"),
-        required_if_eq("submit_to_aligned", "true")
-    )]
+    #[clap(long, default_value("https://ethereum-holesky-rpc.publicnode.com"))]
     rpc_url: String,
-    #[clap(
-        long,
-        default_value("17000"),
-        required_if_eq("submit_to_aligned", "true")
-    )]
+    #[clap(long, default_value("17000"))]
     chain_id: u64,
+    #[clap(long, default_value("100000000000000"))]
+    max_fee: u128,
     #[clap(long)]
     precompiles: bool,
 }
 
-fn main() -> anyhow::Result<()> {
-    env_logger::init();
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let cli = Cli::parse();
 
     match &cli.command {
@@ -59,7 +55,6 @@ fn main() -> anyhow::Result<()> {
             // Perform sanitation checks on directory
             match utils::validate_directory_structure(&args.guest_path) {
                 Ok(_) => {
-                    //TODO: to add input to the guest we need to modify the host....
                     utils::prepare_workspace(
                         &args.guest_path,
                         sp1::SP1_SRC_DIR,
@@ -70,7 +65,6 @@ fn main() -> anyhow::Result<()> {
                         sp1::SP1_BASE_GUEST_CARGO_TOML,
                     )?;
 
-                    //TODO: fetch these from program directory file.......
                     let imports = utils::get_imports(sp1::SP1_GUEST_MAIN).unwrap();
                     let function_bodies = utils::extract_function_bodies(
                         sp1::SP1_GUEST_MAIN,
@@ -121,9 +115,11 @@ fn main() -> anyhow::Result<()> {
                                 None,
                                 &args.rpc_url,
                                 &args.chain_id,
+                                &args.max_fee,
                                 ProvingSystemId::SP1,
                             )
-                            .unwrap();
+                            .await
+                            .expect("Failed to submit to Aligned");
                             info!("SP1 proof submitted and verified on aligned");
                         }
 
@@ -205,9 +201,11 @@ fn main() -> anyhow::Result<()> {
                                 Some(risc0::PUBLIC_INPUT_FILE_PATH),
                                 &args.rpc_url,
                                 &args.chain_id,
+                                &args.max_fee,
                                 ProvingSystemId::Risc0,
                             )
-                            .unwrap();
+                            .await
+                            .expect("Failed to submit to Aligned");
 
                             info!("Risc0 proof submitted and verified on aligned");
                         }

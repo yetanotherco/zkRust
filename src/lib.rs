@@ -1,4 +1,4 @@
-use log::info;
+use log::{error, info};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -9,7 +9,7 @@ use dialoguer::Confirm;
 use ethers::prelude::*;
 use ethers::providers::{Http, Provider};
 use ethers::signers::LocalWallet;
-use ethers::types::Address;
+use ethers::types::{Address, U256};
 
 pub mod risc0;
 pub mod sp1;
@@ -37,6 +37,7 @@ pub async fn pay_batcher(
         .to(addr)
         .value(4000000000000000u128);
 
+    info!("Submitting Payment to  Batcher");
     match signer
         .send_transaction(tx, None)
         .await
@@ -58,13 +59,14 @@ pub async fn pay_batcher(
 }
 
 //NOTE: we default to submitting to the testnet. When mainnet is live will make mainnet submission the default, testnet an option
-pub fn submit_proof_to_aligned(
+pub async fn submit_proof_to_aligned(
     keystore_path: &PathBuf,
     proof_path: &str,
     elf_path: &str,
     pub_input_path: Option<&str>,
     rpc_url: &str,
     chain_id: &u64,
+    max_fee: &u128,
     proof_system_id: ProvingSystemId,
 ) -> anyhow::Result<()> {
     let keystore_password = rpassword::prompt_password("Enter keystore password: ")
@@ -83,11 +85,11 @@ pub fn submit_proof_to_aligned(
 
     let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
 
-    let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-
-    runtime
-        .block_on(pay_batcher(wallet.address(), signer.clone()))
+    pay_batcher(wallet.address(), signer.clone())
+        .await
         .expect("Failed to pay for proof submission");
+
+    let max_fee = U256::from(*max_fee);
 
     let verification_data = VerificationData {
         proving_system: proof_system_id,
@@ -98,13 +100,10 @@ pub fn submit_proof_to_aligned(
         pub_input,
     };
 
-    let nonce = runtime
-        .block_on(get_next_nonce(
-            rpc_url,
-            wallet.address(),
-            BATCHER_PAYMENTS_ADDRESS,
-        ))
+    let nonce = get_next_nonce(rpc_url, wallet.address(), BATCHER_PAYMENTS_ADDRESS)
+        .await
         .expect("could not get nonce");
+
     let chain = match chain_id {
         17000 => Chain::Holesky,
         31337 => Chain::Devnet,
@@ -112,18 +111,27 @@ pub fn submit_proof_to_aligned(
         _ => Chain::Holesky,
     };
 
-    info!("Submitting proof to aligned for verification");
+    info!("Submitting proof to Aligned for Verification");
 
-    runtime
-        .block_on(submit_and_wait_verification(
-            BATCHER_URL,
-            rpc_url,
-            chain,
-            &verification_data,
-            wallet,
-            nonce,
-            BATCHER_PAYMENTS_ADDRESS,
-        ))
-        .expect("failed to submit proof");
+    let Ok(aligned_verification_data) = submit_and_wait_verification(
+        BATCHER_URL,
+        rpc_url,
+        chain,
+        &verification_data,
+        max_fee,
+        wallet,
+        nonce,
+        BATCHER_PAYMENTS_ADDRESS,
+    )
+    .await
+    else {
+        error!("Proof generation failed");
+        return Ok(());
+    };
+    info!("Proof Submitted to Aligned!");
+    info!(
+        "https://explorer.alignedlayer.com/batches/0x{}",
+        hex::encode(aligned_verification_data.batch_merkle_root)
+    );
     Ok(())
 }
