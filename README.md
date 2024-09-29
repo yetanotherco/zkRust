@@ -38,7 +38,7 @@ You can test zkRust for any of the examples in the `examples` folder. This inclu
 - Verifying a tendermint block.
 - Interacting with a user to answer a quiz.
 
-Run one of the following commands to test zkRust. You can choose either risc0 or sp1:
+Run one of the following commands to test zkRust. You can choose either Risc0 or SP1:
 
 **Fibonacci**:
 
@@ -142,7 +142,7 @@ To use zkRust, To use zkRust users specify a `fn main()` whose execution is prov
         └── main.rs
 ```
 
-For using more complex programs you can import a separate lib/ crate into the .
+For more complex projects can define a separate library folder for your use.
 
 ```
 .
@@ -150,7 +150,7 @@ For using more complex programs you can import a separate lib/ crate into the .
     ├── Cargo.toml
     ├── lib/
     └── src
-        └── lib
+        └── main.rs
 ```
 
 The user may also define a `input()`, `output()`, in addition to the `main()`. The `fn input()` and `fn output()` function which defines code that runs outside of the zkVM before and after the VM executes. The `input()` function executes before the zkVM code is executed and allows the user to define inputs passed to the vm such as a deserialized Tx or data fetched from an external source at runtime. Within the `main()` (guest) function the user may write information from the computation performed in the zkVM to an output buffer to be used after proof generation. The `output()` defines code that allows the user to read the information written to that buffer of the and perform post-processing of that data.
@@ -223,7 +223,7 @@ pub fn output() {
 
 To generate a proof of the execution of your code run the following:
 
-- **Sp1**:
+- **SP1**:
   ```sh
   cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH> .
   ```
@@ -233,7 +233,7 @@ To generate a proof of the execution of your code run the following:
   ```
   Make sure to have [Risc0](https://dev.risczero.com/api/zkvm/quickstart#1-install-the-risc-zero-toolchain) installed with version `v1.0.1`
 
-To generate your proof and send it to [Aligned Layer](https://github.com/yetanotherco/aligned_layer). First generate a local wallet keystore using `[cast](https://book.getfoundry.sh/cast/).
+To generate your proof and send it to [Aligned](https://github.com/yetanotherco/aligned_layer). First generate a local wallet keystore using `[cast](https://book.getfoundry.sh/cast/).
 
 ```sh
 cast wallet new-mnemonic
@@ -281,7 +281,7 @@ NOTE: for the precompiles to be included within the compilation step the crate v
 
 # Acknowledgments:
 
-ZK Rust was intioned and designed as a tool to make development on programs that use zkVM's easier and reduce deduplication of code for developers that want to experiment with zk on aligned layer. We want the work and contributions of the SP1 and Risc0 teams to the field of Zero Knowledge Cryptography.
+ZK Rust was intended and designed as a tool to make development on programs that use zkVM's easier and reduce deduplication of code for developers that want to experiment with zk on aligned layer. We want the work and contributions of the SP1 and Risc0 teams to the field of Zero Knowledge Cryptography.
 
 [SP1](https://github.com/succinctlabs/sp1.git)
 
