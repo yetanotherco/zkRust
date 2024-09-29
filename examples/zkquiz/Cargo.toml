@@ -1,0 +1,9 @@
+[package]
+name = "zkquiz"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+regex = "1.10.3"
+zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", branch = "feat/v2" }
+tiny-keccak = { version = "2.0.2", features = ["sha3"] }

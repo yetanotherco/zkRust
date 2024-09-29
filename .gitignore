@@ -3,9 +3,10 @@ target
 .tmp_guest
 .tmp_guest/*
 
-workspaces/risc0/target
-workspaces/risc0/methods/guest/*
-workspaces/sp1/program/*
+workspaces/*
+!workspaces/base_files/
+!workspaces/risc0/
+!workspaces/sp1/
 
 proof_data/sp1/*
 !proof_data/sp1/.gitkeep

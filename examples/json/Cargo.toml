@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0.114"
+zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", branch = "feat/v2" }
+lib = { path = "lib" }
