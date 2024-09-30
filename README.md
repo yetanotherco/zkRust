@@ -19,7 +19,9 @@ and,
 ```sh
 curl -L https://risczero.com/install | bash
 rzup install
+cargo risczero install --version v1.0.1
 cargo risczero --version
+echo "Risc0 Toolchain Installed"
 ```
 
 zkRust can then be installed directly by downloading the latest release binaries.
@@ -267,7 +269,9 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
 
 - `--keystore_path`: Path to the keystore of the users wallet. Defaults to `~/keystore`.
 
-- `--rpc-url`: Specify the rpc-url used for the user eth rpc-url. Defaults to `https://ethereum-holesky-rpc.publicnode.com`.
+- `--rpc-url`: Specifies the rpc-url used for the user eth rpc-url. Defaults to `https://ethereum-holesky-rpc.publicnode.com`.
+
+- `--max-fee`: Specifies the max fee the user is willing to pay for there proof to be included in a batch. Defaults to `0.01 Eth`.
 
 - `--chain_id`: Chain ID number of the ethereum chain Aligned is deployed on. Defaults to `1700`.
 
