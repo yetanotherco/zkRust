@@ -9,7 +9,17 @@ zkRust seeks to simplify the development experience of developing using zkVM's a
 First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains from [risc0](https://github.com/risc0/risc0) and [sp1](https://github.com/succinctlabs/sp1) by running:
 
 ```sh
-make install
+curl -L https://sp1.succinct.xyz | bash
+sp1up
+cargo prove --version
+```
+
+and,
+
+```sh
+curl -L https://risczero.com/install | bash
+rzup install
+cargo risczero --version
 ```
 
 zkRust can then be installed directly by downloading the latest release binaries.
