@@ -46,9 +46,9 @@ pub fn prepare_host(input: &str, output: &str, imports: &str) -> io::Result<()> 
     host_program.push_str(RISC0_BASE_HOST);
 
     // Insert input body
-    let host_program = host_program.replace(utils::HOST_INPUT, &input);
+    let host_program = host_program.replace(utils::HOST_INPUT, input);
     // Insert output body
-    let host_program = host_program.replace(utils::HOST_OUTPUT, &output);
+    let host_program = host_program.replace(utils::HOST_OUTPUT, output);
 
     // Extract Variable names from host and add them to the ExecutorEnv::builder()
     let values = utils::extract_regex(
@@ -75,8 +75,6 @@ pub fn prepare_host(input: &str, output: &str, imports: &str) -> io::Result<()> 
     let mut file = fs::File::create(RISC0_HOST_MAIN)?;
     file.write_all(host_program.as_bytes())?;
 
-    //TODO: remove this
-    //Delete lines that contain zkRust::write(; -> Delete things from within zk_rust_io -> );
     utils::remove_lines(RISC0_HOST_MAIN, "zk_rust_io::write(")?;
     Ok(())
 }
