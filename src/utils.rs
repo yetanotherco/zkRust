@@ -284,8 +284,8 @@ pub fn prepare_workspace(
 
     // Select dependencies from the
     let toml_path = format!("{}/Cargo.toml", guest_path);
-    copy_dependencies(&toml_path, program_toml_dir);
-    copy_dependencies(&toml_path, host_toml_dir);
+    copy_dependencies(&toml_path, program_toml_dir)?;
+    copy_dependencies(&toml_path, host_toml_dir)?;
 
     Ok(())
 }
