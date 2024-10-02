@@ -22,7 +22,7 @@ rzup install
 cargo risczero --version
 ```
 
-zkRust can then be installed directly by downloading the latest release binaries.
+zkRust can also be installed directly by downloading the latest release binaries.
 
 ```sh
 curl -L https://raw.githubusercontent.com/yetanotherco/zkRust/main/install_zkrust.sh | bash
