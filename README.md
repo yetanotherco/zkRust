@@ -35,102 +35,10 @@ You can test zkRust for any of the examples in the `examples` folder. This inclu
 - Computing and reading the results of computing Fibonacci numbers.
 - Performing RSA key verification.
 - Performing ECDSA program.
-- a blockchain state diff program verification.
+- Verification of a blockchain state diff.
 - Computing the Sha256 hash of a value.
 - Verifying a tendermint block.
 - Interacting with a user to answer a quiz.
-
-Run one of the following commands to test zkRust. You can choose either Risc0 or SP1:
-
-**Fibonacci**:
-
-```bash
-make prove_risc0_fibonacci
-```
-
-```bash
-make prove_sp1_fibonacci
-```
-
-**RSA**:
-
-```bash
-make prove_risc0_rsa
-```
-
-```bash
-make prove_sp1_rsa
-```
-
-**ECDSA**:
-
-```bash
-make prove_risc0_ecdsa
-```
-
-```bash
-make prove_sp1_ecdsa
-```
-
-**Blockchain state diff**:
-
-```bash
-make prove_risc0_json
-```
-
-```bash
-make prove_sp1_json
-```
-
-**Blockchain state diff**:
-
-```bash
-make prove_risc0_json
-```
-
-```bash
-make prove_sp1_json
-```
-
-**Regex**:
-
-```bash
-make prove_risc0_regex
-```
-
-```bash
-make prove_sp1_regex
-```
-
-**Sha**:
-
-```bash
-make prove_risc0_sha
-```
-
-```bash
-make prove_sp1_sha
-```
-
-**Tendermint**:
-
-```bash
-make prove_risc0_tendermint
-```
-
-```bash
-make prove_sp1_tendermint
-```
-
-**Zk Quiz**:
-
-```bash
-make prove_risc0_zkquiz
-```
-
-```bash
-make prove_sp1_zkquiz
-```
 
 ## Usage:
 
@@ -265,7 +173,7 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
 
 - `--chain_id`: Chain ID number of the ethereum chain Aligned is deployed on. Defaults to `1700`.
 
-- `--precompiles`: Enables in acceleration via precompiles for supported zkVM's. Specifying this flag allows for VM specific speedups for specific expensive operations such as SHA256, SHA3, bigint multiplication, and ed25519 signature verification. By specifying this flag proving operations for specific operations within the following rust crates are accelerated:
+- `--precompiles`: Enables acceleration via precompiles for supported zkVM's. Specifying this flag allows for VM specific speedups for specific expensive operations such as SHA256, SHA3, bigint multiplication, and ed25519 signature verification. By specifying this flag proving operations for specific operations within the following rust crates are accelerated:
 
   - SP1:
 
@@ -280,6 +188,98 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
     - sha2 v0.10.6
     - k256 v0.13.1
     - crypto-bigint v0.5.5
+
+Run one of the following commands to test zkRust. You can choose either Risc0 or SP1:
+
+**Fibonacci**:
+
+```bash
+make prove_risc0_fibonacci
+```
+
+```bash
+make prove_sp1_fibonacci
+```
+
+**RSA**:
+
+```bash
+make prove_risc0_rsa
+```
+
+```bash
+make prove_sp1_rsa
+```
+
+**ECDSA**:
+
+```bash
+make prove_risc0_ecdsa
+```
+
+```bash
+make prove_sp1_ecdsa
+```
+
+**Blockchain state diff**:
+
+```bash
+make prove_risc0_json
+```
+
+```bash
+make prove_sp1_json
+```
+
+**Blockchain state diff**:
+
+```bash
+make prove_risc0_json
+```
+
+```bash
+make prove_sp1_json
+```
+
+**Regex**:
+
+```bash
+make prove_risc0_regex
+```
+
+```bash
+make prove_sp1_regex
+```
+
+**Sha**:
+
+```bash
+make prove_risc0_sha
+```
+
+```bash
+make prove_sp1_sha
+```
+
+**Tendermint**:
+
+```bash
+make prove_risc0_tendermint
+```
+
+```bash
+make prove_sp1_tendermint
+```
+
+**Zk Quiz**:
+
+```bash
+make prove_risc0_zkquiz
+```
+
+```bash
+make prove_sp1_zkquiz
+```
 
 **NOTE**: for the precompiles to be included within the compilation step the crate version you are using must match the crate version above.
 
