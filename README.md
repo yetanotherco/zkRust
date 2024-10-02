@@ -6,22 +6,12 @@ zkRust seeks to simplify the development experience of developing using zkVM's a
 
 ## Installation:
 
-First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains from [risc0](https://github.com/risc0/risc0) and [sp1](https://github.com/succinctlabs/sp1) by running:
+First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains from [sp1](https://github.com/succinctlabs/sp1) by running:
 
 ```sh
 curl -L https://sp1.succinct.xyz | bash
 sp1up
 cargo prove --version
-```
-
-and,
-
-```sh
-curl -L https://risczero.com/install | bash
-rzup install
-cargo risczero install --version v1.0.1
-cargo risczero --version
-echo "Risc0 Toolchain Installed"
 ```
 
 zkRust can then be installed directly by downloading the latest release binaries.
@@ -291,7 +281,9 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
     - k256 v0.13.1
     - crypto-bigint v0.5.5
 
-NOTE: for the precompiles to be included within the compilation step the crate version you are using must match the crate version above.
+**NOTE**: for the precompiles to be included within the compilation step the crate version you are using must match the crate version above.
+
+**NOTE**: Aligned currently supports Risc0 proofs from `risc0-zkvm` version `v1.0.1`. For generating proofs using `cargo risc-zero` please ensure you are using `v1.0.1` or your proof will not be verified. If you encounter issues installing an older version of `cargo-risc0` please reference this [thread](https://discord.com/channels/953703904086994974/1290498126049841232).
 
 # Acknowledgments:
 
