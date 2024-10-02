@@ -19,7 +19,7 @@ fn main() {
 
     let client = ProverClient::new();
     let (pk, vk) = client.setup(METHOD_ELF);
-    let proof = client
+    let mut proof = client
         .prove(&pk, stdin)
         .compressed()
         .run()
