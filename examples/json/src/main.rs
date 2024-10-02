@@ -58,7 +58,7 @@ fn input() {
 }
 
 fn output() {
-    let account_state: Account = zk_rust_io::read();
+    let account_state: Account = zk_rust_io::out();
     println!(
         "Final account state: {}",
         serde_json::to_string(&account_state).unwrap()

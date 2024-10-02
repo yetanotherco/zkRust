@@ -6,10 +6,12 @@ zkRust seeks to simplify the development experience of developing using zkVM's a
 
 ## Installation:
 
-First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains from [risc0](https://github.com/risc0/risc0) and [sp1](https://github.com/succinctlabs/sp1) by running:
+First make sure [Rust](https://www.rust-lang.org/tools/install) is installed on your machine. Then install the zkVM toolchains from [sp1](https://github.com/succinctlabs/sp1) by running:
 
 ```sh
-make install
+curl -L https://sp1.succinct.xyz | bash
+sp1up
+cargo prove --version
 ```
 
 zkRust can then be installed directly by downloading the latest release binaries.
@@ -33,102 +35,10 @@ You can test zkRust for any of the examples in the `examples` folder. This inclu
 - Computing and reading the results of computing Fibonacci numbers.
 - Performing RSA key verification.
 - Performing ECDSA program.
-- a blockchain state diff program verification.
+- Verification of a blockchain state diff.
 - Computing the Sha256 hash of a value.
 - Verifying a tendermint block.
 - Interacting with a user to answer a quiz.
-
-Run one of the following commands to test zkRust. You can choose either Risc0 or SP1:
-
-**Fibonacci**:
-
-```bash
-make prove_risc0_fibonacci
-```
-
-```bash
-make prove_sp1_fibonacci
-```
-
-**RSA**:
-
-```bash
-make prove_risc0_rsa
-```
-
-```bash
-make prove_sp1_rsa
-```
-
-**ECDSA**:
-
-```bash
-make prove_risc0_ecdsa
-```
-
-```bash
-make prove_sp1_ecdsa
-```
-
-**Blockchain state diff**:
-
-```bash
-make prove_risc0_json
-```
-
-```bash
-make prove_sp1_json
-```
-
-**Blockchain state diff**:
-
-```bash
-make prove_risc0_json
-```
-
-```bash
-make prove_sp1_json
-```
-
-**Regex**:
-
-```bash
-make prove_risc0_regex
-```
-
-```bash
-make prove_sp1_regex
-```
-
-**Sha**:
-
-```bash
-make prove_risc0_sha
-```
-
-```bash
-make prove_sp1_sha
-```
-
-**Tendermint**:
-
-```bash
-make prove_risc0_tendermint
-```
-
-```bash
-make prove_sp1_tendermint
-```
-
-**Zk Quiz**:
-
-```bash
-make prove_risc0_zkquiz
-```
-
-```bash
-make prove_sp1_zkquiz
-```
 
 ## Usage:
 
@@ -257,11 +167,13 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
 
 - `--keystore_path`: Path to the keystore of the users wallet. Defaults to `~/keystore`.
 
-- `--rpc-url`: Specify the rpc-url used for the user eth rpc-url. Defaults to `https://ethereum-holesky-rpc.publicnode.com`.
+- `--rpc-url`: Specifies the rpc-url used for the user eth rpc-url. Defaults to `https://ethereum-holesky-rpc.publicnode.com`.
+
+- `--max-fee`: Specifies the max fee the user is willing to pay for there proof to be included in a batch. Defaults to `0.01 Eth`.
 
 - `--chain_id`: Chain ID number of the ethereum chain Aligned is deployed on. Defaults to `1700`.
 
-- `--precompiles`: Enables in acceleration via precompiles for supported zkVM's. Specifying this flag allows for VM specific speedups for specific expensive operations such as SHA256, SHA3, bigint multiplication, and ed25519 signature verification. By specifying this flag proving operations for specific operations within the following rust crates are accelerated:
+- `--precompiles`: Enables acceleration via precompiles for supported zkVM's. Specifying this flag allows for VM specific speedups for specific expensive operations such as SHA256, SHA3, bigint multiplication, and ed25519 signature verification. By specifying this flag proving operations for specific operations within the following rust crates are accelerated:
 
   - SP1:
 
@@ -277,7 +189,101 @@ cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYS
     - k256 v0.13.1
     - crypto-bigint v0.5.5
 
-NOTE: for the precompiles to be included within the compilation step the crate version you are using must match the crate version above.
+Run one of the following commands to test zkRust. You can choose either Risc0 or SP1:
+
+**Fibonacci**:
+
+```bash
+make prove_risc0_fibonacci
+```
+
+```bash
+make prove_sp1_fibonacci
+```
+
+**RSA**:
+
+```bash
+make prove_risc0_rsa
+```
+
+```bash
+make prove_sp1_rsa
+```
+
+**ECDSA**:
+
+```bash
+make prove_risc0_ecdsa
+```
+
+```bash
+make prove_sp1_ecdsa
+```
+
+**Blockchain state diff**:
+
+```bash
+make prove_risc0_json
+```
+
+```bash
+make prove_sp1_json
+```
+
+**Blockchain state diff**:
+
+```bash
+make prove_risc0_json
+```
+
+```bash
+make prove_sp1_json
+```
+
+**Regex**:
+
+```bash
+make prove_risc0_regex
+```
+
+```bash
+make prove_sp1_regex
+```
+
+**Sha**:
+
+```bash
+make prove_risc0_sha
+```
+
+```bash
+make prove_sp1_sha
+```
+
+**Tendermint**:
+
+```bash
+make prove_risc0_tendermint
+```
+
+```bash
+make prove_sp1_tendermint
+```
+
+**Zk Quiz**:
+
+```bash
+make prove_risc0_zkquiz
+```
+
+```bash
+make prove_sp1_zkquiz
+```
+
+**NOTE**: for the precompiles to be included within the compilation step the crate version you are using must match the crate version above.
+
+**NOTE**: Aligned currently supports Risc0 proofs from `risc0-zkvm` version `v1.0.1`. For generating proofs using `cargo risc-zero` please ensure you are using `v1.0.1` or your proof will not be verified. If you encounter issues installing an older version of `cargo-risc0` please reference this [thread](https://discord.com/channels/953703904086994974/1290498126049841232).
 
 # Acknowledgments:
 

@@ -75,7 +75,8 @@ echo "Installing zkVM toolchains"
 
 # Install risc0 toolchain
 curl -L https://risczero.com/install | bash
-rzup
+rzup install
+cargo risczero install --version v1.0.1
 cargo risczero --version
 echo "Risc0 Toolchain Installed"
 

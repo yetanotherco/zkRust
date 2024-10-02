@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use log::error;
 use regex::Regex;
 use std::{
     fs::{self, File, OpenOptions},
@@ -131,44 +132,36 @@ pub fn extract_function_bodies(file_path: &str, functions: Vec<String>) -> io::R
     Ok(extracted_codes)
 }
 
-// Function that handles the stack and status when parsing the file to extract_function_bodies 
+// Function that handles the stack and status when parsing the file to extract_function_bodies
 fn handle_stack(ch: char, stack: &mut Vec<&str>) -> bool {
     match stack.last() {
-        Some(&"{") => {
-            return handle_char(ch, stack)
-        }
-        Some(&"/") => {
-            match ch {
-                '/' => {
-                    stack.pop();
-                    stack.push("//comment");
-                }
-                '*' => {
-                    stack.pop();
-                    stack.push("/*comment*\\");
-                }
-                _ => {
-                    stack.pop();
-                    handle_char(ch, stack);
-                }
+        Some(&"{") => return handle_char(ch, stack),
+        Some(&"/") => match ch {
+            '/' => {
+                stack.pop();
+                stack.push("//comment");
             }
-        }
-        Some(&"//comment") => {
-            match ch {
-                '\n' => {
-                    stack.pop();
-                }
-                _ => {}
+            '*' => {
+                stack.pop();
+                stack.push("/*comment*\\");
             }
-        }
-        Some(&"/*comment*\\") => {
-            match ch {
-                '*' => {
-                    stack.push("*");
-                }
-                _ => {}
+            _ => {
+                stack.pop();
+                handle_char(ch, stack);
             }
-        }
+        },
+        Some(&"//comment") => match ch {
+            '\n' => {
+                stack.pop();
+            }
+            _ => {}
+        },
+        Some(&"/*comment*\\") => match ch {
+            '*' => {
+                stack.push("*");
+            }
+            _ => {}
+        },
         Some(&"*") => {
             match ch {
                 '/' => {
@@ -180,35 +173,29 @@ fn handle_stack(ch: char, stack: &mut Vec<&str>) -> bool {
                 }
             }
         }
-        Some(&"\"string\"") => {
-            match ch {
-                '\"' => {
-                    stack.pop();
-                }
-                _ => {}
+        Some(&"\"string\"") => match ch {
+            '\"' => {
+                stack.pop();
             }
-        }
-        Some(&"\'c\'") => {
-            match ch {
-                '\'' => {
-                    stack.pop();
-                }
-                _ => {}
+            _ => {}
+        },
+        Some(&"\'c\'") => match ch {
+            '\'' => {
+                stack.pop();
             }
-        }
+            _ => {}
+        },
         _ => {}
     }
-    return false;
+    false
 }
 // Function to handle characters when in normal status of the stack
-fn handle_char (ch: char, stack: &mut Vec<&str>) -> bool {
+fn handle_char(ch: char, stack: &mut Vec<&str>) -> bool {
     match ch {
         '/' => {
             stack.push("/");
         }
-        '{' => {
-            stack.push("{")
-        }
+        '{' => stack.push("{"),
         '}' => {
             stack.pop();
             if stack.is_empty() {
@@ -223,28 +210,33 @@ fn handle_char (ch: char, stack: &mut Vec<&str>) -> bool {
         }
         _ => {}
     }
-    return false;
+    false
 }
 
-fn copy_dependencies(toml_path: &str, guest_toml_path: &str) {
-    let mut toml = std::fs::File::open(toml_path).unwrap();
+fn copy_dependencies(toml_path: &str, guest_toml_path: &str) -> io::Result<()> {
+    let mut toml = std::fs::File::open(toml_path)?;
     let mut content = String::new();
-    toml.read_to_string(&mut content).unwrap();
+    toml.read_to_string(&mut content)?;
 
-    if let Some(start_index) = content.find("[dependencies]") {
-        // Get all text after the search string
-        let dependencies = &content[start_index + "[dependencies]".len()..];
-        // Open the output file in append mode
-        let mut guest_toml = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(guest_toml_path)
-            .unwrap();
+    match content.find("[dependencies]") {
+        Some(start_index) => {
+            // Get all text after the search string
+            let dependencies = &content[start_index + "[dependencies]".len()..];
+            // Open the output file in append mode
+            let mut guest_toml = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(guest_toml_path)
+                .unwrap();
 
-        // Write the text after the search string to the output file
-        guest_toml.write_all(dependencies.as_bytes()).unwrap();
-    } else {
-        println!("Failed to copy dependencies in Guest Cargo.toml file, plese check");
+            // Write the text after the search string to the output file
+            guest_toml.write_all(dependencies.as_bytes())
+        }
+        None => {
+            return Err(io::Error::other(
+                "Failed to find `[dependencies]` in project Cargo.toml",
+            ))
+        }
     }
 }
 
@@ -258,7 +250,7 @@ pub fn prepare_workspace(
     base_guest_toml_dir: &str,
 ) -> io::Result<()> {
     // Create proof_data directory
-    std::fs::create_dir_all("./proof_data").expect("Failed to create proof_data/");
+    std::fs::create_dir_all("./proof_data").unwrap_or(error!("Failed to create proof_data/"));
     let workspace_guest_src_dir = format!("{}/src/", workspace_guest_dir);
     let workspace_host_src_dir = format!("{}/src/", workspace_host_dir);
     if let Err(e) = fs::remove_dir_all(&workspace_guest_src_dir) {
@@ -292,8 +284,8 @@ pub fn prepare_workspace(
 
     // Select dependencies from the
     let toml_path = format!("{}/Cargo.toml", guest_path);
-    copy_dependencies(&toml_path, program_toml_dir);
-    copy_dependencies(&toml_path, host_toml_dir);
+    copy_dependencies(&toml_path, program_toml_dir)?;
+    copy_dependencies(&toml_path, host_toml_dir)?;
 
     Ok(())
 }
@@ -320,7 +312,7 @@ pub fn get_imports(filename: &str) -> io::Result<String> {
             // if not continue reading till one is found this covers the case where import statements cover multiple lines
             if !line.contains(';') {
                 // Iterate and continue adding lines to the import while line does not contain a ';' break if it does
-                while let Some(line) = lines.next() {
+                for line in lines.by_ref() {
                     let mut line = line?;
                     line.push('\n');
                     imports.push_str(&line.clone());
@@ -335,13 +327,12 @@ pub fn get_imports(filename: &str) -> io::Result<String> {
     Ok(imports)
 }
 
-// TODO: Abstract Regex
 pub fn extract_regex(file_path: &str, regex: &str) -> io::Result<Vec<String>> {
     let file = fs::File::open(file_path)?;
     let reader = io::BufReader::new(file);
 
     let mut values = Vec::new();
-    let regex = Regex::new(&regex).unwrap();
+    let regex = Regex::new(regex).unwrap();
 
     for line in reader.lines() {
         let line = line?;
@@ -377,28 +368,31 @@ pub fn remove_lines(file_path: &str, target: &str) -> io::Result<()> {
     Ok(())
 }
 
-pub fn validate_directory_structure(root: &str) -> anyhow::Result<()> {
+pub fn validate_directory_structure(root: &str) -> bool {
     let root = Path::new(root);
     // Check if Cargo.toml exists in the root directory
     let cargo_toml = root.join("Cargo.toml");
     if !cargo_toml.exists() {
-        return Err(anyhow!("Cargo.toml not found."));
+        error!("Cargo.toml not found.");
+        return false;
     }
 
     // Check if src/ and lib/ directories exist
     let src_dir = root.join("src");
 
     if !src_dir.exists() {
-        return Err(anyhow!("src/ directory not found in root"));
+        error!("src/ directory not found in root");
+        return false;
     }
 
     // Check if src/ contains main.rs file
     let main_rs = src_dir.join("main.rs");
     if !main_rs.exists() {
-        return Err(anyhow!("main.rs not found in src/ directory in root"));
+        error!("main.rs not found in src/ directory in root");
+        return false;
     }
 
-    Ok(())
+    true
 }
 
 pub fn prepare_guest(

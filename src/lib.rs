@@ -69,25 +69,38 @@ pub async fn submit_proof_to_aligned(
     max_fee: &u128,
     proof_system_id: ProvingSystemId,
 ) -> anyhow::Result<()> {
-    let keystore_password = rpassword::prompt_password("Enter keystore password: ")
-        .expect("Failed to read keystore password");
+    let Ok(keystore_password) = rpassword::prompt_password("Enter keystore password: ") else {
+        error!("Failed to read keystore password");
+        return Ok(());
+    };
 
-    let wallet = LocalWallet::decrypt_keystore(keystore_path, keystore_password)
-        .expect("Failed to decrypt keystore")
-        .with_chain_id(17000u64);
+    let Ok(local_wallet) = LocalWallet::decrypt_keystore(keystore_path, keystore_password) else {
+        error!("Failed to decrypt keystore");
+        return Ok(());
+    };
+    let wallet = local_wallet.with_chain_id(17000u64);
 
-    let proof = std::fs::read(proof_path).expect("failed to read proof");
-    let elf_data = std::fs::read(elf_path).expect("failed to read ELF");
-    let pub_input = pub_input_path
-        .map(|pub_input_path| std::fs::read(pub_input_path).expect("failed to read public input"));
+    let Ok(proof) = std::fs::read(proof_path) else {
+        error!("Failed to Read Proof");
+        return Ok(());
+    };
+    let Ok(elf_data) = std::fs::read(elf_path) else {
+        error!("Failed to Read ELF");
+        return Ok(());
+    };
+    let pub_input = match pub_input_path {
+        Some(path) => Some(std::fs::read(path).expect("Failed to Read Public Inputs")),
+        None => None,
+    };
 
-    let provider = Provider::<Http>::try_from(rpc_url).expect("Failed to connect to provider");
+    let Ok(provider) = Provider::<Http>::try_from(rpc_url) else {
+        error!("Failed to connect to provider");
+        return Ok(());
+    };
 
     let signer = Arc::new(SignerMiddleware::new(provider.clone(), wallet.clone()));
 
-    pay_batcher(wallet.address(), signer.clone())
-        .await
-        .expect("Failed to pay for proof submission");
+    pay_batcher(wallet.address(), signer.clone()).await?;
 
     let max_fee = U256::from(*max_fee);
 
@@ -100,9 +113,11 @@ pub async fn submit_proof_to_aligned(
         pub_input,
     };
 
-    let nonce = get_next_nonce(rpc_url, wallet.address(), BATCHER_PAYMENTS_ADDRESS)
-        .await
-        .expect("could not get nonce");
+    let Ok(nonce) = get_next_nonce(rpc_url, wallet.address(), BATCHER_PAYMENTS_ADDRESS).await
+    else {
+        error!("could not get nonce");
+        return Ok(());
+    };
 
     let chain = match chain_id {
         17000 => Chain::Holesky,
