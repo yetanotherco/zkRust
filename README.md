@@ -50,7 +50,7 @@ You can test zkRust for any of the examples in the `examples` folder. This inclu
 
 ## Usage:
 
-To use zkRust, To use zkRust users specify a `fn main()` whose execution is proven within the zkVM. This function must be defined within a `main.rs` file in a directory with the following structure:
+To use zkRust, users must specify a `main()` function whose execution is proven within the zkVM. This function must be defined within a `main.rs` file in a directory with the following structure:
 
 ```
 .
@@ -60,7 +60,7 @@ To use zkRust, To use zkRust users specify a `fn main()` whose execution is prov
         └── main.rs
 ```
 
-For more complex projects can define a separate library folder for your use.
+Projects can also store libraries in a separate `lib/` folder.
 
 ```
 .
@@ -71,7 +71,7 @@ For more complex projects can define a separate library folder for your use.
         └── main.rs
 ```
 
-The user may also define a `input()`, `output()`, in addition to the `main()`. The `fn input()` and `fn output()` function which defines code that runs outside of the zkVM before and after the VM executes. The `input()` function executes before the zkVM code is executed and allows the user to define inputs passed to the vm such as a deserialized Tx or data fetched from an external source at runtime. Within the `main()` (guest) function the user may write information from the computation performed in the zkVM to an output buffer to be used after proof generation. The `output()` defines code that allows the user to read the information written to that buffer of the and perform post-processing of that data.
+The user may also define `input()`, `output()` functions, in addition to `main()`. The `fn input()` and `fn output()` functions define code that runs outside of the zkVM before and after the VM executes. The `input()` function executes before the zkVM code is executed and allows the user to define inputs passed to the vm such as a deserialized Tx or data fetched from an external source at runtime. Within the `main()` (guest) function the user may write information from the computation performed in the zkVM to an output buffer to be used after proof generation. The `output()` function defines code that allows the user to read the information written to that buffer and perform post-processing of that data.
 
 ![](./assets/zkRust_execution_flow.png)
 
