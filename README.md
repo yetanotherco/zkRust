@@ -22,6 +22,12 @@ rzup install
 cargo risczero --version
 ```
 
+zkRust can also be installed directly by downloading the latest release binaries.
+
+```sh
+curl -L https://raw.githubusercontent.com/yetanotherco/zkRust/main/install_zkrust.sh | bash
+```
+
 ## Quickstart
 
 To get started you can create a workspace for your project in zkRust by running:
@@ -155,10 +161,10 @@ Then you can import your created keystore using:
 cast wallet import --interactive <PATH_TO_KEYSTORE.json>
 ```
 
-Finally, to generate and send your proof of your programs execution to aligned use the zkRust CLI with the `--submit-to-aligned-with-keystore` flag.
+Finally, to generate and send your proof of your programs execution to Aligned use the zkRust CLI with the `--submit-to-aligned` flag.
 
 ```sh
-cargo run --release -- prove-sp1 --submit-to-aligned-with-keystore <PATH_TO_KEYSTORE> <PROGRAM_DIRECTORY_PATH .
+cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH> --submit-to-aligned --keystore-path <PATH_TO_KEYSTORE>
 ```
 
 ### Flags
@@ -285,7 +291,7 @@ make prove_sp1_zkquiz
 
 # Acknowledgments:
 
-ZK Rust was intended and designed as a tool to make development on programs that use zkVM's easier and reduce deduplication of code for developers that want to experiment with zk on aligned layer. We want the work and contributions of the SP1 and Risc0 teams to the field of Zero Knowledge Cryptography.
+ZK Rust was intended and designed as a tool to make development on programs that use zkVM's easier and reduce deduplication of code for developers that want to experiment with zk on Aligned layer. We want the work and contributions of the SP1 and Risc0 teams to the field of Zero Knowledge Cryptography.
 
 [SP1](https://github.com/succinctlabs/sp1.git)
 
