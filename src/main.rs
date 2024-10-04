@@ -6,10 +6,7 @@ use log::info;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
-use zkRust::risc0;
-use zkRust::sp1;
-use zkRust::submit_proof_to_aligned;
-use zkRust::utils;
+use zkRust::{risc0, sp1, submit_proof_to_aligned, utils, ProofArgs};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -25,23 +22,6 @@ enum Commands {
     ProveSp1(ProofArgs),
     #[clap(about = "Generate a proof of execution of a program using RISC0")]
     ProveRisc0(ProofArgs),
-}
-
-#[derive(Args, Debug)]
-struct ProofArgs {
-    guest_path: String,
-    #[clap(long)]
-    submit_to_aligned: bool,
-    #[clap(long, required_if_eq("submit_to_aligned", "true"))]
-    keystore_path: Option<PathBuf>,
-    #[clap(long, default_value("https://ethereum-holesky-rpc.publicnode.com"))]
-    rpc_url: String,
-    #[clap(long, default_value("17000"))]
-    chain_id: u64,
-    #[clap(long, default_value("100000000000000"))]
-    max_fee: u128,
-    #[clap(long)]
-    precompiles: bool,
 }
 
 #[tokio::main]
@@ -113,13 +93,10 @@ async fn main() -> anyhow::Result<()> {
                     // Submit to aligned
                     if args.submit_to_aligned {
                         submit_proof_to_aligned(
-                            args.keystore_path.as_ref().unwrap(),
                             sp1::SP1_PROOF_PATH,
                             sp1::SP1_ELF_PATH,
                             None,
-                            &args.rpc_url,
-                            &args.chain_id,
-                            &args.max_fee,
+                            args,
                             ProvingSystemId::SP1,
                         )
                         .await
@@ -209,13 +186,10 @@ async fn main() -> anyhow::Result<()> {
                     // Submit to aligned
                     if args.submit_to_aligned {
                         submit_proof_to_aligned(
-                            args.keystore_path.as_ref().unwrap(),
                             risc0::PROOF_FILE_PATH,
                             risc0::IMAGE_ID_FILE_PATH,
                             Some(risc0::PUBLIC_INPUT_FILE_PATH),
                             &args.rpc_url,
-                            &args.chain_id,
-                            &args.max_fee,
                             ProvingSystemId::Risc0,
                         )
                         .await
