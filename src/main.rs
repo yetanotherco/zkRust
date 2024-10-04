@@ -7,11 +7,7 @@ use log::info;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
-use zkRust::risc0;
-use zkRust::sp1;
-use zkRust::submit_proof_to_aligned;
-use zkRust::utils;
-use anyhow::ensure;
+use zkRust::{risc0, sp1, submit_proof_to_aligned, utils, ProofArgs};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -27,49 +23,6 @@ enum Commands {
     ProveSp1(ProofArgs),
     #[clap(about = "Generate a proof of execution of a program using RISC0")]
     ProveRisc0(ProofArgs),
-}
-
-#[derive(Args, Debug)]
-struct ProofArgs {
-    guest_path: String,
-    #[clap(long)]
-    submit_to_aligned: bool,
-    #[clap(long, required_if_eq("submit_to_aligned", "true"))]
-    keystore_path: Option<PathBuf>,
-    #[clap(long, default_value("https://ethereum-holesky-rpc.publicnode.com"))]
-    rpc_url: String,
-    #[clap(long, value_enum, default_value_t = NetworkArg::Holesky)]
-    network: NetworkArg,
-    #[clap(long, default_value("100000000000000"))]
-    max_fee: u128,
-    #[clap(long)]
-    precompiles: bool,
-}
-
-#[derive(Debug, Clone, Copy, ValueEnum)]
-enum NetworkArg {
-    Devnet,
-    Holesky,
-    HoleskyStage,
-}
-
-impl From<NetworkArg> for Network {
-    fn from(env_arg: NetworkArg) -> Self {
-        match env_arg {
-            NetworkArg::Devnet => Network::Devnet,
-            NetworkArg::Holesky => Network::Holesky,
-            NetworkArg::HoleskyStage => Network::HoleskyStage,
-        }
-    }
-}
-impl std::fmt::Display for NetworkArg {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            NetworkArg::Devnet => write!(f, "devnet"),
-            NetworkArg::Holesky => write!(f, "holesky"),
-            NetworkArg::HoleskyStage => write!(f, "holesky-stage"),
-        }
-    }
 }
 
 #[tokio::main]
@@ -140,22 +93,26 @@ async fn main() -> anyhow::Result<()> {
 
                     // Submit to aligned
                     if args.submit_to_aligned {
-                        let result = submit_proof_to_aligned(
-                            args.keystore_path.as_ref().unwrap(),
+                        submit_proof_to_aligned(
                             sp1::SP1_PROOF_PATH,
                             sp1::SP1_ELF_PATH,
                             None,
-                            &args.rpc_url,
-                            args.network.into(),
-                            &args.max_fee,
+                            args,
                             ProvingSystemId::SP1,
                         )
                         .await;
-                        ensure!(result.is_ok(), "Failed to submit to Aligned: {:?}", result.err());
+                        ensure!(
+                            result.is_ok(),
+                            "Failed to submit to Aligned: {:?}",
+                            result.err()
+                        );
 
                         info!("SP1 proof submitted and verified on Aligned");
 
-                        info!("In the batch with merkle root: {:?}", result.unwrap().batch_merkle_root);
+                        info!(
+                            "In the batch with merkle root: {:?}",
+                            result.unwrap().batch_merkle_root
+                        );
                     }
 
                     std::fs::copy(sp1::SP1_BASE_HOST_FILE, sp1::SP1_HOST_MAIN).map_err(|e| {
@@ -236,21 +193,25 @@ async fn main() -> anyhow::Result<()> {
 
                     // Submit to aligned
                     if args.submit_to_aligned {
-                        let result = submit_proof_to_aligned(
-                            args.keystore_path.as_ref().unwrap(),
-                            sp1::SP1_PROOF_PATH,
-                            sp1::SP1_ELF_PATH,
-                            None,
+                        submit_proof_to_aligned(
+                            risc0::PROOF_FILE_PATH,
+                            risc0::IMAGE_ID_FILE_PATH,
+                            Some(risc0::PUBLIC_INPUT_FILE_PATH),
                             &args.rpc_url,
-                            args.network.into(),
-                            &args.max_fee,
-                            ProvingSystemId::SP1,
+                            ProvingSystemId::Risc0,
                         )
                         .await;
-                        ensure!(result.is_ok(), "Failed to submit to Aligned: {:?}", result.err());
+                        ensure!(
+                            result.is_ok(),
+                            "Failed to submit to Aligned: {:?}",
+                            result.err()
+                        );
 
                         info!("Risc0 proof submitted and verified on Aligned");
-                        info!("In the batch with merkle root: {:?}", result.unwrap().batch_merkle_root);
+                        info!(
+                            "In the batch with merkle root: {:?}",
+                            result.unwrap().batch_merkle_root
+                        );
                     }
 
                     // Clear Host file

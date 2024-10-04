@@ -249,7 +249,8 @@ pub fn prepare_workspace(
     base_guest_toml_dir: &str,
 ) -> io::Result<()> {
     // Create proof_data directory
-    std::fs::create_dir_all("./proof_data").unwrap_or(info!("Failed to create ./proof_data/ , it may already exist"));
+    std::fs::create_dir_all("./proof_data")
+        .unwrap_or(info!("Saving generated Proofs to `proof_data/`"));
     let workspace_guest_src_dir = format!("{}/src/", workspace_guest_dir);
     let workspace_host_src_dir = format!("{}/src/", workspace_host_dir);
     if let Err(e) = fs::remove_dir_all(&workspace_guest_src_dir) {
