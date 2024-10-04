@@ -15,4 +15,4 @@ k256 = { version = "=0.13.3", features = [
     "std",
     "ecdsa",
 ], default_features = false }
-zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", branch = "feat/v2" }
+zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git" }
