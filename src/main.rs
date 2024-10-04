@@ -151,9 +151,11 @@ async fn main() -> anyhow::Result<()> {
                             ProvingSystemId::SP1,
                         )
                         .await;
-                        ensure!(result.is_ok(), "Failed to submit to Aligned: {:?}", result);
+                        ensure!(result.is_ok(), "Failed to submit to Aligned: {:?}", result.err());
 
                         info!("SP1 proof submitted and verified on Aligned");
+
+                        info!("In the batch with merkle root: {:?}", result.unwrap().batch_merkle_root);
                     }
 
                     std::fs::copy(sp1::SP1_BASE_HOST_FILE, sp1::SP1_HOST_MAIN).map_err(|e| {
@@ -245,9 +247,10 @@ async fn main() -> anyhow::Result<()> {
                             ProvingSystemId::SP1,
                         )
                         .await;
-                        ensure!(result.is_ok(), "Failed to submit to Aligned: {:?}", result);
+                        ensure!(result.is_ok(), "Failed to submit to Aligned: {:?}", result.err());
 
                         info!("Risc0 proof submitted and verified on Aligned");
+                        info!("In the batch with merkle root: {:?}", result.unwrap().batch_merkle_root);
                     }
 
                     // Clear Host file

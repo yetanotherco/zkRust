@@ -1,15 +1,14 @@
 use log::{error, info};
 use std::path::PathBuf;
 
-use aligned_sdk::core::types::{Network, ProvingSystemId, VerificationData};
-use aligned_sdk::sdk::{deposit_to_aligned, get_next_nonce, submit_and_wait_verification};
+use aligned_sdk::core::types::{Network, ProvingSystemId, VerificationData, AlignedVerificationData};
+use aligned_sdk::sdk::{deposit_to_aligned, get_next_nonce, submit_and_wait_verification, get_chain_id};
 use dialoguer::Confirm;
 use ethers::prelude::*;
 use ethers::providers::{Http, Provider};
 use ethers::signers::LocalWallet;
 use ethers::types::U256;
-use aligned_sdk::core::errors::AlignedError;
-use aligned_sdk::core::errors::SubmitError;
+use aligned_sdk::core::errors::{SubmitError, AlignedError};
 
 pub mod risc0;
 pub mod sp1;
@@ -27,14 +26,14 @@ pub async fn submit_proof_to_aligned(
     network: Network,
     max_fee: &u128,
     proof_system_id: ProvingSystemId,
-) -> anyhow::Result<(), AlignedError> {
+) -> anyhow::Result<AlignedVerificationData, AlignedError> {
     let keystore_password = rpassword::prompt_password("Enter keystore password: ")
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
 
     let local_wallet = LocalWallet::decrypt_keystore(keystore_path, keystore_password)
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
 
-    let chain_id = get_chain_id(eth_rpc_url.as_str()).await?;
+    let chain_id = get_chain_id(rpc_url).await?;
     let wallet = local_wallet.with_chain_id(chain_id);
 
     let proof = std::fs::read(proof_path)
@@ -99,5 +98,5 @@ pub async fn submit_proof_to_aligned(
         "https://explorer.alignedlayer.com/batches/0x{}",
         hex::encode(aligned_verification_data.batch_merkle_root)
     );
-    Ok(())
+    Ok(aligned_verification_data)
 }
