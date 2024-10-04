@@ -1,5 +1,6 @@
-use aligned_sdk::core::types::ProvingSystemId;
-use clap::{Args, Parser, Subcommand};
+use aligned_sdk::core::types::{Network, ProvingSystemId};
+
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use env_logger::Env;
 use log::error;
 use log::info;
@@ -10,6 +11,7 @@ use zkRust::risc0;
 use zkRust::sp1;
 use zkRust::submit_proof_to_aligned;
 use zkRust::utils;
+use anyhow::ensure;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -36,12 +38,38 @@ struct ProofArgs {
     keystore_path: Option<PathBuf>,
     #[clap(long, default_value("https://ethereum-holesky-rpc.publicnode.com"))]
     rpc_url: String,
-    #[clap(long, default_value("17000"))]
-    chain_id: u64,
+    #[clap(long, value_enum, default_value_t = NetworkArg::Holesky)]
+    network: NetworkArg,
     #[clap(long, default_value("100000000000000"))]
     max_fee: u128,
     #[clap(long)]
     precompiles: bool,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum NetworkArg {
+    Devnet,
+    Holesky,
+    HoleskyStage,
+}
+
+impl From<NetworkArg> for Network {
+    fn from(env_arg: NetworkArg) -> Self {
+        match env_arg {
+            NetworkArg::Devnet => Network::Devnet,
+            NetworkArg::Holesky => Network::Holesky,
+            NetworkArg::HoleskyStage => Network::HoleskyStage,
+        }
+    }
+}
+impl std::fmt::Display for NetworkArg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NetworkArg::Devnet => write!(f, "devnet"),
+            NetworkArg::Holesky => write!(f, "holesky"),
+            NetworkArg::HoleskyStage => write!(f, "holesky-stage"),
+        }
+    }
 }
 
 #[tokio::main]
@@ -112,21 +140,19 @@ async fn main() -> anyhow::Result<()> {
 
                     // Submit to aligned
                     if args.submit_to_aligned {
-                        submit_proof_to_aligned(
+                        let result = submit_proof_to_aligned(
                             args.keystore_path.as_ref().unwrap(),
                             sp1::SP1_PROOF_PATH,
                             sp1::SP1_ELF_PATH,
                             None,
                             &args.rpc_url,
-                            &args.chain_id,
+                            args.network.into(),
                             &args.max_fee,
                             ProvingSystemId::SP1,
                         )
-                        .await
-                        .map_err(|e| {
-                            error!("Failed to submit to Aligned");
-                            return e;
-                        })?;
+                        .await;
+                        ensure!(result.is_ok(), "Failed to submit to Aligned: {:?}", result);
+
                         info!("SP1 proof submitted and verified on Aligned");
                     }
 
@@ -208,21 +234,18 @@ async fn main() -> anyhow::Result<()> {
 
                     // Submit to aligned
                     if args.submit_to_aligned {
-                        submit_proof_to_aligned(
+                        let result = submit_proof_to_aligned(
                             args.keystore_path.as_ref().unwrap(),
-                            risc0::PROOF_FILE_PATH,
-                            risc0::IMAGE_ID_FILE_PATH,
-                            Some(risc0::PUBLIC_INPUT_FILE_PATH),
+                            sp1::SP1_PROOF_PATH,
+                            sp1::SP1_ELF_PATH,
+                            None,
                             &args.rpc_url,
-                            &args.chain_id,
+                            args.network.into(),
                             &args.max_fee,
-                            ProvingSystemId::Risc0,
+                            ProvingSystemId::SP1,
                         )
-                        .await
-                        .map_err(|e| {
-                            error!("Failed to submit to Aligned");
-                            return e;
-                        })?;
+                        .await;
+                        ensure!(result.is_ok(), "Failed to submit to Aligned: {:?}", result);
 
                         info!("Risc0 proof submitted and verified on Aligned");
                     }
