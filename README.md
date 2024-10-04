@@ -1,8 +1,8 @@
 # zkRust
 
-`zkRust` is a CLI tool to simplify the developing applications in Rust using zkVM's such as SP1 or Risc0.
+`zkRust` is a CLI tool to simplify developing zk applications in Rust using zkVM's such as SP1 or Risc0.
 
-zkRust seeks to simplify the development experience of developing using zkVM's and enable developers by providing the choice of which zkVM they would like to develop with and eliminating redundancy in the Zk Application development process.
+`zkRust` simplifies the development experience of using zkVM's by abstracting the complexity of using zkVM's from the developer and providing them the choice of which zkVM they would like to develop with.
 
 ## Installation:
 
@@ -30,8 +30,6 @@ To get started you can create a workspace for your project in zkRust by running:
 cargo new <PROGRAM_DIRECTORY>
 ```
 
-It's that simple.
-
 You can test zkRust for any of the examples in the `examples` folder. This include programs for:
 
 - Computing and reading the results of computing Fibonacci numbers.
@@ -44,7 +42,7 @@ You can test zkRust for any of the examples in the `examples` folder. This inclu
 
 ## Usage:
 
-To use zkRust, To use zkRust users specify a `fn main()` whose execution is proven within the zkVM. This function must be defined within a `main.rs` file in a directory with the following structure:
+To use zkRust, users must specify a `main()` function whose execution is proven within the zkVM. This function must be defined within a `main.rs` file in a directory with the following structure:
 
 ```
 .
@@ -54,7 +52,7 @@ To use zkRust, To use zkRust users specify a `fn main()` whose execution is prov
         └── main.rs
 ```
 
-For more complex projects can define a separate library folder for your use.
+Projects can also store libraries in a separate `lib/` folder.
 
 ```
 .
@@ -65,11 +63,13 @@ For more complex projects can define a separate library folder for your use.
         └── main.rs
 ```
 
-The user may also define a `input()`, `output()`, in addition to the `main()`. The `fn input()` and `fn output()` function which defines code that runs outside of the zkVM before and after the VM executes. The `input()` function executes before the zkVM code is executed and allows the user to define inputs passed to the vm such as a deserialized Tx or data fetched from an external source at runtime. Within the `main()` (guest) function the user may write information from the computation performed in the zkVM to an output buffer to be used after proof generation. The `output()` defines code that allows the user to read the information written to that buffer of the and perform post-processing of that data.
+The user may also define a `input()`, `output()` functions, in addition to `main()`. The `input()` and `output()` functions define code that runs outside of the zkVM before and after the zkVM generates a proof of the computation. The `input()` function executes before the zkVM code is executed and allows the user to define inputs passed to the VM such as a deserialized Tx or data fetched from an external source at runtime. Within the `main()` (guest) function the user may write information from the computation performed in the zkVM to an output buffer to be used after proof generation. The `output()` defines code that allows the user to read the information written to that buffer of the and perform post-processing of that data.
 
 ![](./assets/zkRust_execution_flow.png)
 
-The user may specify inputs into the VM (guest) code using `zk_rust_io::write()` as long on the type of rust object they are writing implements `Serializable`. Within there `main()` function (guest) the user may read in the inputs by specifying `zk_rust_io::read()` and output data computed during the execution phase of the code within the VM (guest) program by specifying `zk_rust_io::commit()`. To read the output of the output of the VM (guest) program you declare `zk_rust_io::out()`. The `zk_rust_io` crate defines function headers that are not inlined and are purely used as compile time symbols to ensure a user can compile there rust code before running it within one of the zkVM available in zkRust.
+The user may specify (public) inputs into the VM (guest) code using `zk_rust_io::write()` as long on the type of Rust object they want to input into the VM implements [Serialize](https://docs.rs/serde/latest/serde/trait.Serialize.html). Within there `main()` function the user may read in these inputs to there program by specifying `zk_rust_io::read()`. They can also output data computed during the execution phase of the code within the VM program by commiting it to the VM output via `zk_rust_io::commit()`. To read the output of the output of the VM program the user declares `zk_rust_io::out()`, which reads and deserializes the committed information from the VM output buffer.
+
+The `zk_rust_io` crate defines function headers that are not inlined and are purely used as compile time symbols to ensure a user can compile there Rust code before running it within one of the zkVM available in zkRust.
 
 To use the I/O imports import the `zk_rust_io` crate by adding the following to the `Cargo.toml` in your project directory.
 
@@ -130,8 +130,6 @@ pub fn output() {
     println!("res: {}", res);
 }
 ```
-
-//NOTE ADD ANNOTATION ABOUT WRITTEN AND READING FROM BUFFER IN ONE call -> Otherwise issues.
 
 To generate a proof of the execution of your code run the following:
 
@@ -223,7 +221,7 @@ make prove_risc0_ecdsa
 make prove_sp1_ecdsa
 ```
 
-**Blockchain state diff**:
+**Blockchain State Diff**:
 
 ```bash
 make prove_risc0_json
@@ -233,7 +231,7 @@ make prove_risc0_json
 make prove_sp1_json
 ```
 
-**Blockchain state diff**:
+**Blockchain State Diff**:
 
 ```bash
 make prove_risc0_json
@@ -284,8 +282,6 @@ make prove_sp1_zkquiz
 ```
 
 **NOTE**: for the precompiles to be included within the compilation step the crate version you are using must match the crate version above.
-
-**NOTE**: Aligned currently supports Risc0 proofs from `risc0-zkvm` version `v1.0.1`. For generating proofs using `cargo risc-zero` please ensure you are using `v1.0.1` or your proof will not be verified. If you encounter issues installing an older version of `cargo-risc0` please reference this [thread](https://discord.com/channels/953703904086994974/1290498126049841232).
 
 # Acknowledgments:
 
