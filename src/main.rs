@@ -1,12 +1,11 @@
-use aligned_sdk::core::types::{Network, ProvingSystemId};
-
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use aligned_sdk::core::types::ProvingSystemId;
+use clap::{Parser, Subcommand};
 use env_logger::Env;
 use log::error;
 use log::info;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
+use tokio::io;
 use zkRust::{risc0, sp1, submit_proof_to_aligned, utils, ProofArgs};
 
 #[derive(Parser)]
@@ -26,7 +25,7 @@ enum Commands {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let cli = Cli::parse();
 
@@ -100,24 +99,17 @@ async fn main() -> anyhow::Result<()> {
                             args,
                             ProvingSystemId::SP1,
                         )
-                        .await;
-                        ensure!(
-                            result.is_ok(),
-                            "Failed to submit to Aligned: {:?}",
-                            result.err()
-                        );
-
+                        .await
+                        .map_err(|e| {
+                            error!("Error Submitting Proof to Aligned: {:?}", e);
+                            io::Error::other(e.to_string())
+                        })?;
                         info!("SP1 proof submitted and verified on Aligned");
-
-                        info!(
-                            "In the batch with merkle root: {:?}",
-                            result.unwrap().batch_merkle_root
-                        );
                     }
 
                     std::fs::copy(sp1::SP1_BASE_HOST_FILE, sp1::SP1_HOST_MAIN).map_err(|e| {
                         error!("Failed to clear SP1 Host File");
-                        return e;
+                        e
                     })?;
 
                     return Ok(());
@@ -197,28 +189,23 @@ async fn main() -> anyhow::Result<()> {
                             risc0::PROOF_FILE_PATH,
                             risc0::IMAGE_ID_FILE_PATH,
                             Some(risc0::PUBLIC_INPUT_FILE_PATH),
-                            &args.rpc_url,
+                            args,
                             ProvingSystemId::Risc0,
                         )
-                        .await;
-                        ensure!(
-                            result.is_ok(),
-                            "Failed to submit to Aligned: {:?}",
-                            result.err()
-                        );
+                        .await
+                        .map_err(|e| {
+                            error!("Error Submitting Proof to Aligned: {:?}", e);
+                            io::Error::other(e.to_string())
+                        })?;
 
                         info!("Risc0 proof submitted and verified on Aligned");
-                        info!(
-                            "In the batch with merkle root: {:?}",
-                            result.unwrap().batch_merkle_root
-                        );
                     }
 
                     // Clear Host file
                     std::fs::copy(risc0::RISC0_BASE_HOST_FILE, risc0::RISC0_HOST_MAIN).map_err(
                         |e| {
                             error!("Failed to Clear Risc0 Host File");
-                            return e;
+                            e
                         },
                     )?;
 

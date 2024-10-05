@@ -9,7 +9,9 @@ use std::path::PathBuf;
 use aligned_sdk::core::types::{
     AlignedVerificationData, Network, ProvingSystemId, VerificationData,
 };
-use aligned_sdk::sdk::{deposit_to_aligned, get_next_nonce, submit_and_wait_verification};
+use aligned_sdk::sdk::{
+    deposit_to_aligned, get_chain_id, get_next_nonce, submit_and_wait_verification,
+};
 use clap::{Args, ValueEnum};
 use dialoguer::Confirm;
 use ethers::prelude::*;
@@ -26,28 +28,53 @@ const BATCHER_URL: &str = "wss://batcher.alignedlayer.com";
 #[derive(Args, Debug)]
 pub struct ProofArgs {
     pub guest_path: String,
-    #[clap(long)]
+    #[clap(long = "submit-to-aligned")]
     pub submit_to_aligned: bool,
-    #[clap(long, required_if_eq("submit_to_aligned", "true"))]
-    pub keystore_path: Option<PathBuf>,
-    #[clap(long, default_value("https://ethereum-holesky-rpc.publicnode.com"))]
+    #[clap(
+        name = "Path to Wallet Key Store",
+        long = "keystore-path",
+        required_if_eq("submit_to_aligned", "true")
+    )]
+    pub keystore_path: PathBuf,
+    #[clap(
+        name = "URL of an Ethereum RPC Node",
+        long = "rpc-url",
+        default_value("https://ethereum-holesky-rpc.publicnode.com")
+    )]
     pub rpc_url: String,
     #[clap(
         name = "The working network's name",
         long = "network",
-        default_value = "devnet"
+        default_value = "holesky"
     )]
     pub network: NetworkArg,
-    #[clap(long, default_value("100000000000000"))]
+    #[clap(
+        name = "The maximum Max Fee payment for proof submission to Aligned",
+        long = "max-fee",
+        default_value("100000000000000")
+    )]
     pub max_fee: u128,
-    #[clap(long, default_value("4000000000000000"))]
+    #[clap(
+        name = "Payment send to the BatcherServicContract to fund Proof submission (Wei)",
+        long = "batcher-payment",
+        default_value("4000000000000000")
+    )]
     pub batcher_payment: u128,
-    #[clap(long)]
+    #[clap(
+        name = "Enables zkVM Acceleration via VM Precompiles",
+        long = "precompiles"
+    )]
     pub precompiles: bool,
+    #[arg(
+        name = "Aligned verification data directory Path",
+        long = "aligned_verification_data_path",
+        default_value = "./aligned_verification_data/"
+    )]
+    batch_inclusion_data_directory_path: String,
 }
 
 #[derive(Debug, Clone, ValueEnum, Copy)]
-enum NetworkArg {
+pub enum NetworkArg {
     Devnet,
     Holesky,
     HoleskyStage,
@@ -67,21 +94,16 @@ pub async fn submit_proof_to_aligned(
     proof_path: &str,
     elf_path: &str,
     pub_input_path: Option<&str>,
-    args: ProofArgs,
+    args: &ProofArgs,
     proof_system_id: ProvingSystemId,
 ) -> Result<(), AlignedError> {
-    let Ok(keystore_password) = rpassword::prompt_password("Enter keystore password: ") else {
-        error!("Failed to read keystore password");
-        return Ok(());
-    };
-) -> anyhow::Result<AlignedVerificationData, AlignedError> {
     let keystore_password = rpassword::prompt_password("Enter keystore password: ")
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
 
-    let local_wallet = LocalWallet::decrypt_keystore(keystore_path, keystore_password)
+    let network: Network = args.network.into();
+    let local_wallet = LocalWallet::decrypt_keystore(&args.keystore_path, keystore_password)
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
-
-    let chain_id = get_chain_id(rpc_url).await?;
+    let chain_id = get_chain_id(&args.rpc_url).await?;
     let wallet = local_wallet.with_chain_id(chain_id);
 
     let proof = std::fs::read(proof_path)
@@ -89,15 +111,18 @@ pub async fn submit_proof_to_aligned(
 
     let elf_data = std::fs::read(elf_path)
         .map_err(|e| AlignedError::SubmitError(SubmitError::GenericError(e.to_string())))?;
-        
+
     let pub_input = match pub_input_path {
-        Some(path) => Some(std::fs::read(path)
-            .map_err(|e| AlignedError::SubmitError(SubmitError::GenericError(e.to_string())))?),
+        Some(path) => Some(
+            std::fs::read(path)
+                .map_err(|e| AlignedError::SubmitError(SubmitError::GenericError(e.to_string())))?,
+        ),
         None => None,
     };
 
-    let provider = Provider::<Http>::try_from(rpc_url)
-        .map_err(|e| AlignedError::SubmitError(SubmitError::EthereumProviderError(e.to_string())))?;
+    let provider = Provider::<Http>::try_from(&args.rpc_url).map_err(|e| {
+        AlignedError::SubmitError(SubmitError::EthereumProviderError(e.to_string()))
+    })?;
 
     let signer = SignerMiddleware::new(provider.clone(), wallet.clone());
 
@@ -116,9 +141,18 @@ pub async fn submit_proof_to_aligned(
        return Err(SubmitError::GenericError("Batcher Payment cancelled".to_string()))?;
     }
 
-    info!("Submitting Payment to  Batcher");
-    let transaction_receipt =
-        deposit_to_aligned(U256::from(args.batcher_payment), signer, network.clone()).await?;
+    info!("Submitting Payment to Batcher");
+    let Ok(tx_receipt) =
+        deposit_to_aligned(U256::from(args.batcher_payment), signer, network).await
+    else {
+        return Err(SubmitError::GenericError(
+            "Failed to Deposit Funds into the Batcher".to_string(),
+        ))?;
+    };
+    info!(
+        "Payment sent to the batcher successfully. Tx: 0x{:x}",
+        tx_receipt.transaction_hash
+    );
 
     let max_fee = U256::from(args.max_fee);
 
@@ -131,8 +165,11 @@ pub async fn submit_proof_to_aligned(
         pub_input,
     };
 
-    let nonce = get_next_nonce(rpc_url, wallet.address(), network).await
-        .map_err(|e| AlignedError::SubmitError(SubmitError::EthereumProviderError(e.to_string())))?;
+    let nonce = get_next_nonce(&args.rpc_url, wallet.address(), network)
+        .await
+        .map_err(|e| {
+            AlignedError::SubmitError(SubmitError::EthereumProviderError(e.to_string()))
+        })?;
 
     info!("Submitting proof to Aligned for Verification");
 
@@ -143,7 +180,7 @@ pub async fn submit_proof_to_aligned(
         &verification_data,
         max_fee,
         wallet,
-        nonce
+        nonce,
     )
     .await
     .map_err(|e| AlignedError::SubmitError(SubmitError::GenericError(e.to_string())))?;
@@ -153,7 +190,14 @@ pub async fn submit_proof_to_aligned(
         "https://explorer.alignedlayer.com/batches/0x{}",
         hex::encode(aligned_verification_data.batch_merkle_root)
     );
-    println!("Aligned Verification Data saved to root");
+    save_response(
+        PathBuf::from(&args.batch_inclusion_data_directory_path),
+        &aligned_verification_data,
+    )?;
+    println!(
+        "Aligned Verification Data saved {:?}",
+        args.batch_inclusion_data_directory_path
+    );
     Ok(())
 }
 
@@ -161,6 +205,10 @@ fn save_response(
     batch_inclusion_data_directory_path: PathBuf,
     aligned_verification_data: &AlignedVerificationData,
 ) -> Result<(), SubmitError> {
+    if !batch_inclusion_data_directory_path.exists() {
+        std::fs::create_dir_all(&batch_inclusion_data_directory_path)
+            .map_err(|e| SubmitError::IoError(batch_inclusion_data_directory_path.clone(), e))?;
+    }
     let batch_merkle_root = &hex::encode(aligned_verification_data.batch_merkle_root)[..8];
     let batch_inclusion_data_file_name = batch_merkle_root.to_owned()
         + "_"
@@ -170,8 +218,7 @@ fn save_response(
     let batch_inclusion_data_path =
         batch_inclusion_data_directory_path.join(batch_inclusion_data_file_name);
 
-    let data = cbor_serialize(&aligned_verification_data)
-        .map_err(|e| SubmitError::SerializationError(e))?;
+    let data = cbor_serialize(&aligned_verification_data)?;
 
     let mut file = File::create(&batch_inclusion_data_path)
         .map_err(|e| SubmitError::IoError(batch_inclusion_data_path.clone(), e))?;

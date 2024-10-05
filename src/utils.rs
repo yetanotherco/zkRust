@@ -3,7 +3,7 @@ use regex::Regex;
 use std::{
     fs::{self, File, OpenOptions},
     io::{self, BufRead, BufReader, ErrorKind, Read, Seek, Write},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 // Host
@@ -231,11 +231,9 @@ fn copy_dependencies(toml_path: &str, guest_toml_path: &str) -> io::Result<()> {
             // Write the text after the search string to the output file
             guest_toml.write_all(dependencies.as_bytes())
         }
-        None => {
-            return Err(io::Error::other(
-                "Failed to find `[dependencies]` in project Cargo.toml",
-            ))
-        }
+        None => Err(io::Error::other(
+            "Failed to find `[dependencies]` in project Cargo.toml",
+        )),
     }
 }
 
@@ -249,8 +247,11 @@ pub fn prepare_workspace(
     base_guest_toml_dir: &str,
 ) -> io::Result<()> {
     // Create proof_data directory
-    std::fs::create_dir_all("./proof_data")
-        .unwrap_or(info!("Saving generated Proofs to `proof_data/`"));
+    let proof_data_dir = PathBuf::from("./proof_data");
+    if !proof_data_dir.exists() {
+        std::fs::create_dir_all("./proof_data")
+            .unwrap_or(info!("saving generated proofs to `proof_data/`"));
+    }
     let workspace_guest_src_dir = format!("{}/src/", workspace_guest_dir);
     let workspace_host_src_dir = format!("{}/src/", workspace_host_dir);
     if let Err(e) = fs::remove_dir_all(&workspace_guest_src_dir) {
