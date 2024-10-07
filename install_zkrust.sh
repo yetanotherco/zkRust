@@ -8,13 +8,13 @@ BASE_DIR=$HOME
 ZKRUST_DIR="${ZKRUST_DIR-"$BASE_DIR/.zkRust"}"
 ZKRUST_BIN_DIR="$ZKRUST_DIR/bin"
 ZKRUST_BIN_PATH="$ZKRUST_BIN_DIR/zkRust"
+ZKRUST_GIT_REPO_URL="https://github.com/yetanotherco/zkRust.git"
 CURRENT_TAG=$(curl -s -L \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   https://api.github.com/repos/yetanotherco/zkRust/releases/latest \
   | grep '"tag_name":' | awk -F'"' '{print $4}')
 RELEASE_URL="https://github.com/yetanotherco/zkRust/releases/download/$CURRENT_TAG/"
-
 ARCH=$(uname -m)
 
 if [ "$ARCH" == "x86_64" ]; then
@@ -87,17 +87,14 @@ cargo prove --version
 echo "Sp1 Toolchain Installed"
 
 # Clone the specific directory structure from the Git repository
-ZKRUST_GIT_REPO_URL="https://github.com/yetanotherco/zkRust.git"
 
-echo "Cloning repository..."
-git clone "$ZKRUST_GIT_REPO_URL" "$ZKRUST_DIR"
+echo "Cloning Workspaces..."
+git clone "$ZKRUST_GIT_REPO_URL" "$ZKRUST_DIR/zkRust"
 
 # Copy the directory structure from the cloned repository to the .zkRust folder
-echo "Copying directory structure..."
-cp -r "$ZKRUST_DIR/zkRust/workspaces/" "$ZKRUST_DIR/"
+cp -r "$ZKRUST_DIR/zkRust/workspaces" "$ZKRUST_DIR/."
 
 # Clean up the cloned repository
-echo "Cleaning up..."
 rm -rf "$ZKRUST_DIR/zkRust"
 
-echo "Run 'source $PROFILE' or start a new terminal session to use aligned."
+echo "Run 'source $PROFILE' or start a new terminal session to use zkRust!"
