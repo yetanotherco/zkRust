@@ -1,7 +1,24 @@
-install: install_sp1 install_risc0
+SHELL := $(shell echo $$SHELL)
+
+# Find the profile directory based on the shell
+ifeq ($(findstring bash,$(SHELL)),bash)
+    PROFILE := ~/.bashrc
+else ifeq ($(findstring zsh,$(SHELL)),zsh)
+    PROFILE := ~/.zshenv
+else ifeq ($(findstring fish,$(SHELL)),fish)
+    PROFILE := ~/.config/fish/config.fish
+else ifeq ($(findstring sh,$(SHELL)),sh)
+    PROFILE := ~/.profile
+else
+    echo "zkrust: could not detect shell, manually add ${ZKRUST_BIN_DIR} to your PATH."
+	exit 1
+endif
+
+install: install_risc0 install_sp1
 
 install_sp1:
 	@curl -L https://sp1.succinct.xyz | bash
+	@source $(PROFILE)
 	@sp1up
 	@cargo prove --version
 
