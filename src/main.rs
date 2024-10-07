@@ -1,15 +1,12 @@
 use aligned_sdk::core::types::ProvingSystemId;
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use env_logger::Env;
 use log::error;
 use log::info;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
-use zkRust::risc0;
-use zkRust::sp1;
-use zkRust::submit_proof_to_aligned;
-use zkRust::utils;
+use tokio::io;
+use zkRust::{risc0, sp1, submit_proof_to_aligned, utils, ProofArgs};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -27,25 +24,8 @@ enum Commands {
     ProveRisc0(ProofArgs),
 }
 
-#[derive(Args, Debug)]
-struct ProofArgs {
-    guest_path: String,
-    #[clap(long)]
-    submit_to_aligned: bool,
-    #[clap(long, required_if_eq("submit_to_aligned", "true"))]
-    keystore_path: Option<PathBuf>,
-    #[clap(long, default_value("https://ethereum-holesky-rpc.publicnode.com"))]
-    rpc_url: String,
-    #[clap(long, default_value("17000"))]
-    chain_id: u64,
-    #[clap(long, default_value("100000000000000"))]
-    max_fee: u128,
-    #[clap(long)]
-    precompiles: bool,
-}
-
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let cli = Cli::parse();
 
@@ -113,26 +93,23 @@ async fn main() -> anyhow::Result<()> {
                     // Submit to aligned
                     if args.submit_to_aligned {
                         submit_proof_to_aligned(
-                            args.keystore_path.as_ref().unwrap(),
                             sp1::SP1_PROOF_PATH,
                             sp1::SP1_ELF_PATH,
                             None,
-                            &args.rpc_url,
-                            &args.chain_id,
-                            &args.max_fee,
+                            args,
                             ProvingSystemId::SP1,
                         )
                         .await
                         .map_err(|e| {
-                            error!("Failed to submit to Aligned");
-                            return e;
+                            error!("Error Submitting Proof to Aligned: {:?}", e);
+                            io::Error::other(e.to_string())
                         })?;
                         info!("SP1 proof submitted and verified on Aligned");
                     }
 
                     std::fs::copy(sp1::SP1_BASE_HOST_FILE, sp1::SP1_HOST_MAIN).map_err(|e| {
                         error!("Failed to clear SP1 Host File");
-                        return e;
+                        e
                     })?;
 
                     return Ok(());
@@ -209,19 +186,16 @@ async fn main() -> anyhow::Result<()> {
                     // Submit to aligned
                     if args.submit_to_aligned {
                         submit_proof_to_aligned(
-                            args.keystore_path.as_ref().unwrap(),
                             risc0::PROOF_FILE_PATH,
                             risc0::IMAGE_ID_FILE_PATH,
                             Some(risc0::PUBLIC_INPUT_FILE_PATH),
-                            &args.rpc_url,
-                            &args.chain_id,
-                            &args.max_fee,
+                            args,
                             ProvingSystemId::Risc0,
                         )
                         .await
                         .map_err(|e| {
-                            error!("Failed to submit to Aligned");
-                            return e;
+                            error!("Error Submitting Proof to Aligned: {:?}", e);
+                            io::Error::other(e.to_string())
                         })?;
 
                         info!("Risc0 proof submitted and verified on Aligned");
@@ -231,7 +205,7 @@ async fn main() -> anyhow::Result<()> {
                     std::fs::copy(risc0::RISC0_BASE_HOST_FILE, risc0::RISC0_HOST_MAIN).map_err(
                         |e| {
                             error!("Failed to Clear Risc0 Host File");
-                            return e;
+                            e
                         },
                     )?;
 

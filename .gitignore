@@ -13,5 +13,7 @@ proof_data/sp1/*
 proof_data/risc0/*
 !proof_data/risc0/.gitkeep
 
+aligned_verification_data/*
+
 .DS_Store
 **/.DS_Store
