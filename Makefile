@@ -69,14 +69,14 @@ prove_sp1_ecdsa:
 prove_sp1_json:
 	@RUST_LOG=info cargo run --release -- prove-sp1 examples/json
 
-prove_risc0_regex:
+prove_sp1_regex:
 	@RUST_LOG=info cargo run --release -- prove-risc0 examples/regex
 
-prove_risc0_sha:
+prove_sp1_sha:
 	@RUST_LOG=info cargo run --release -- prove-risc0 examples/sha
 
-prove_risc0_tendermint:
+prove_sp1_tendermint:
 	@RUST_LOG=info cargo run --release -- prove-risc0 examples/tendermint
 
-prove_risc0_zkquiz:
+prove_sp1_zkquiz:
 	@RUST_LOG=info cargo run --release -- prove-risc0 examples/zkquiz
