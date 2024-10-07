@@ -86,4 +86,18 @@ sp1up
 cargo prove --version
 echo "Sp1 Toolchain Installed"
 
+# Clone the specific directory structure from the Git repository
+ZKRUST_GIT_REPO_URL="https://github.com/yetanotherco/zkRust.git"
+
+echo "Cloning repository..."
+git clone "$ZKRUST_GIT_REPO_URL" "$ZKRUST_DIR"
+
+# Copy the directory structure from the cloned repository to the .zkRust folder
+echo "Copying directory structure..."
+cp -r "$ZKRUST_DIR/zkRust/workspaces/" "$ZKRUST_DIR/"
+
+# Clean up the cloned repository
+echo "Cleaning up..."
+rm -rf "$ZKRUST_DIR/zkRust"
+
 echo "Run 'source $PROFILE' or start a new terminal session to use aligned."
