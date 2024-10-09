@@ -80,7 +80,7 @@ The `zk_rust_io` crate defines function headers that are not inlined and are pur
 To use the I/O imports import the `zk_rust_io` crate by adding the following to the `Cargo.toml` in your project directory.
 
 ```sh
-zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", version = "v0.1.0" }
+zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git" }
 ```
 
 ### input.rs

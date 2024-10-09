@@ -35,6 +35,9 @@ __EXAMPLES__:
 prove_risc0_fibonacci:
 	@RUST_LOG=info cargo run --release -- prove-risc0 examples/fibonacci
 
+prove_risc0_is_even:
+	@RUST_LOG=info cargo run --release -- prove-risc0 examples/is_even
+
 prove_risc0_rsa:
 	@RUST_LOG=info cargo run --release -- prove-risc0 examples/rsa
 
@@ -59,6 +62,9 @@ prove_risc0_zkquiz:
 # SP1
 prove_sp1_fibonacci:
 	@RUST_LOG=info cargo run --release -- prove-sp1 examples/fibonacci
+
+prove_sp1_is_even:
+	@RUST_LOG=info cargo run --release -- prove-risc0 examples/is_even
 
 prove_sp1_rsa:
 	@RUST_LOG=info cargo run --release -- prove-sp1 examples/rsa

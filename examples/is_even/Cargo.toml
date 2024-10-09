@@ -1,8 +1,7 @@
 [package]
-name = "regex"
+name = "is_even"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-regex = "1.10.3"
 zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git" }
