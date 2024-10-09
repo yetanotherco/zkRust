@@ -104,7 +104,7 @@ pub async fn submit_proof_to_aligned(
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
 
     let network: Network = args.network.into();
-    //TODO: required if submission enabled. Therefore we unwrap().
+    //Required if submission enabled. Therefore we unwrap().
     let keystore_path  = args.keystore_path.clone().unwrap();
     let local_wallet = LocalWallet::decrypt_keystore(&keystore_path, keystore_password)
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
@@ -157,7 +157,7 @@ pub async fn submit_proof_to_aligned(
         if Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
             .with_prompt(format!(
                 "Would you like to deposit {:?} eth to Aligned to fund proof submission?",
-                format_estimated_fee
+                args.batcher_payment
             ))
             .interact()
             .map_err(|e| {
@@ -196,9 +196,9 @@ pub async fn submit_proof_to_aligned(
             SubmitError::GenericError(e.to_string())
         })?
     {
-        info!("Batcher Payment Cancelled");
+        info!("User declined the submition cost");
         return Err(SubmitError::GenericError(
-            "Insufficient User Balance on Aligned".to_string(),
+            "User declined the submition cost".to_string(),
         ))?;
     }
 

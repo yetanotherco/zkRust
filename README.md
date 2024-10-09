@@ -169,9 +169,9 @@ cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH> --submit-to-aligned --
 
 ### Flags
 
-- `--submit_to_aligned`: Sends the proof to be verified on Aligned after proof generation. Requires an rpc url and keystore for a funded wallet specified via the `--rpc-url` and `--key_store` flags.
+- `--submit-to-aligned`: Sends the proof to be verified on Aligned after proof generation. Requires an rpc url and keystore for a funded wallet specified via the `--rpc-url` and `--key_store` flags.
 
-- `--keystore_path`: Path to the keystore of the users wallet. Defaults to `~/keystore`.
+- `--keystore-path`: Path to the keystore of the users wallet. Defaults to `~/keystore`.
 
 - `--rpc-url`: Specifies the rpc-url used for the user eth rpc-url. Defaults to `https://ethereum-holesky-rpc.publicnode.com`.
 
@@ -225,16 +225,6 @@ make prove_risc0_ecdsa
 
 ```bash
 make prove_sp1_ecdsa
-```
-
-**Blockchain State Diff**:
-
-```bash
-make prove_risc0_json
-```
-
-```bash
-make prove_sp1_json
 ```
 
 **Blockchain State Diff**:
