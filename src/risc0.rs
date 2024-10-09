@@ -1,21 +1,19 @@
 use std::{
-    fs,
-    io::{self, Write},
-    process::{Command, ExitStatus},
+    fs, io::{self, Write}, path::PathBuf, process::{Command, ExitStatus}
 };
 
 use crate::utils;
 
 /// RISC0 workspace directories
-pub const RISC0_WORKSPACE_DIR: &str = "./workspaces/risc0/";
-pub const RISC0_SRC_DIR: &str = "./workspaces/risc0/methods/guest";
-pub const RISC0_GUEST_MAIN: &str = "./workspaces/risc0/methods/guest/src/main.rs";
-pub const RISC0_HOST_MAIN: &str = "./workspaces/risc0/host/src/main.rs";
-pub const RISC0_BASE_HOST_CARGO_TOML: &str = "./workspaces/base_files/risc0/cargo_host";
-pub const RISC0_BASE_GUEST_CARGO_TOML: &str = "./workspaces/base_files/risc0/cargo_guest";
-pub const RISC0_BASE_HOST: &str = include_str!("../workspaces/base_files/risc0/host");
-pub const RISC0_BASE_HOST_FILE: &str = "./workspaces/base_files/risc0/host";
-pub const RISC0_GUEST_CARGO_TOML: &str = "./workspaces/risc0/methods/guest/Cargo.toml";
+pub const RISC0_WORKSPACE_DIR: &str = "workspaces/risc0/";
+pub const RISC0_SRC_DIR: &str = "workspaces/risc0/methods/guest";
+pub const RISC0_GUEST_MAIN: &str = "workspaces/risc0/methods/guest/src/main.rs";
+pub const RISC0_HOST_MAIN: &str = "workspaces/risc0/host/src/main.rs";
+pub const RISC0_BASE_HOST_CARGO_TOML: &str = "workspaces/base_files/risc0/cargo_host";
+pub const RISC0_BASE_GUEST_CARGO_TOML: &str = "workspaces/base_files/risc0/cargo_guest";
+pub const RISC0_BASE_HOST: &str = "workspaces/base_files/risc0/host";
+pub const RISC0_BASE_HOST_FILE: &str = "workspaces/base_files/risc0/host";
+pub const RISC0_GUEST_CARGO_TOML: &str = "workspaces/risc0/methods/guest/Cargo.toml";
 
 // Proof data generation paths
 pub const PROOF_FILE_PATH: &str = "./proof_data/risc0/risc0.proof";
@@ -41,9 +39,10 @@ pub const RISC0_IO_WRITE: &str = "risc0_zkvm::guest::env::write";
 pub const RISC0_IO_COMMIT: &str = "risc0_zkvm::guest::env::commit";
 pub const RISC0_IO_OUT: &str = "receipt.journal.decode().unwrap();";
 
-pub fn prepare_host(input: &str, output: &str, imports: &str) -> io::Result<()> {
+pub fn prepare_host(input: &str, output: &str, imports: &str, host_dir: &PathBuf, host_main: &PathBuf) -> io::Result<()> {
     let mut host_program = imports.to_string();
-    host_program.push_str(RISC0_BASE_HOST);
+    let contents = fs::read_to_string(host_dir)?;
+    host_program.push_str(&contents);
 
     // Insert input body
     let host_program = host_program.replace(utils::HOST_INPUT, input);
@@ -52,7 +51,7 @@ pub fn prepare_host(input: &str, output: &str, imports: &str) -> io::Result<()> 
 
     // Extract Variable names from host and add them to the ExecutorEnv::builder()
     let values = utils::extract_regex(
-        RISC0_HOST_MAIN,
+        &host_main,
         &format!("{}[(](.*?)[)]", regex::escape(utils::IO_WRITE)),
     )?;
 
@@ -72,20 +71,21 @@ pub fn prepare_host(input: &str, output: &str, imports: &str) -> io::Result<()> 
     // replace zkRust::out()
     let host_program = host_program.replace(utils::IO_OUT, RISC0_IO_OUT);
 
-    let mut file = fs::File::create(RISC0_HOST_MAIN)?;
+    let mut file = fs::File::create(host_main)?;
     file.write_all(host_program.as_bytes())?;
 
-    utils::remove_lines(RISC0_HOST_MAIN, "zk_rust_io::write(")?;
+    utils::remove_lines(host_main, "zk_rust_io::write(")?;
     Ok(())
 }
 
 /// Generates RISC0 proof and image ID
-pub fn generate_risc0_proof() -> io::Result<ExitStatus> {
-    let guest_path = fs::canonicalize(RISC0_WORKSPACE_DIR)?;
+pub fn generate_risc0_proof(guest_path: &PathBuf, current_dir: &PathBuf) -> io::Result<ExitStatus> {
 
     Command::new("cargo")
         .arg("run")
         .arg("--release")
+        .arg("--")
+        .arg(current_dir)
         .current_dir(guest_path)
         .status()
 }
