@@ -36,9 +36,9 @@ pub struct ProofArgs {
     #[clap(
         name = "Path to Wallet Key Store",
         long = "keystore-path",
-        required_if_eq("submit-to-aligned", "true")
+        required_if_eq("submit_to_aligned", "true")
     )]
-    pub keystore_path: PathBuf,
+    pub keystore_path: Option<PathBuf>,
     #[clap(
         name = "URL of an Ethereum RPC Node",
         long = "rpc-url",
@@ -104,7 +104,9 @@ pub async fn submit_proof_to_aligned(
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
 
     let network: Network = args.network.into();
-    let local_wallet = LocalWallet::decrypt_keystore(&args.keystore_path, keystore_password)
+    //TODO: required if submission enabled. Therefore we unwrap().
+    let keystore_path  = args.keystore_path.clone().unwrap();
+    let local_wallet = LocalWallet::decrypt_keystore(&keystore_path, keystore_password)
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
     let chain_id = get_chain_id(&args.rpc_url).await?;
     let wallet = local_wallet.with_chain_id(chain_id);
