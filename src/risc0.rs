@@ -1,5 +1,8 @@
 use std::{
-    fs, io::{self, Write}, path::PathBuf, process::{Command, ExitStatus}
+    fs,
+    io::{self, Write},
+    path::PathBuf,
+    process::{Command, ExitStatus},
 };
 
 use crate::utils;
@@ -39,7 +42,13 @@ pub const RISC0_IO_WRITE: &str = "risc0_zkvm::guest::env::write";
 pub const RISC0_IO_COMMIT: &str = "risc0_zkvm::guest::env::commit";
 pub const RISC0_IO_OUT: &str = "receipt.journal.decode().unwrap();";
 
-pub fn prepare_host(input: &str, output: &str, imports: &str, host_dir: &PathBuf, host_main: &PathBuf) -> io::Result<()> {
+pub fn prepare_host(
+    input: &str,
+    output: &str,
+    imports: &str,
+    host_dir: &PathBuf,
+    host_main: &PathBuf,
+) -> io::Result<()> {
     let mut host_program = imports.to_string();
     let contents = fs::read_to_string(host_dir)?;
     host_program.push_str(&contents);
@@ -51,7 +60,7 @@ pub fn prepare_host(input: &str, output: &str, imports: &str, host_dir: &PathBuf
 
     // Extract Variable names from host and add them to the ExecutorEnv::builder()
     let values = utils::extract_regex(
-        &host_main,
+        host_main,
         &format!("{}[(](.*?)[)]", regex::escape(utils::IO_WRITE)),
     )?;
 
@@ -80,7 +89,6 @@ pub fn prepare_host(input: &str, output: &str, imports: &str, host_dir: &PathBuf
 
 /// Generates RISC0 proof and image ID
 pub fn generate_risc0_proof(guest_path: &PathBuf, current_dir: &PathBuf) -> io::Result<ExitStatus> {
-
     Command::new("cargo")
         .arg("run")
         .arg("--release")
