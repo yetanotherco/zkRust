@@ -1,4 +1,4 @@
-use log::{error, info};
+use log::error;
 use regex::Regex;
 use std::{
     fs::{self, File, OpenOptions},
@@ -91,7 +91,10 @@ pub fn insert(target_file: &str, text: &str, search_string: &str) -> io::Result<
 }
 
 //Note: Works with a one off '{' not with '}'
-pub fn extract_function_bodies(file_path: &PathBuf, functions: Vec<String>) -> io::Result<Vec<String>> {
+pub fn extract_function_bodies(
+    file_path: &PathBuf,
+    functions: Vec<String>,
+) -> io::Result<Vec<String>> {
     // Read the contents of the target file
     let mut code = String::new();
     fs::File::open(file_path)?.read_to_string(&mut code)?;
@@ -212,7 +215,7 @@ fn handle_char(ch: char, stack: &mut Vec<&str>) -> bool {
     false
 }
 
-fn copy_dependencies(toml_path: &PathBuf, guest_toml_path: &PathBuf) -> io::Result<()> {
+fn copy_dependencies(toml_path: &Path, guest_toml_path: &Path) -> io::Result<()> {
     let mut toml = std::fs::File::open(toml_path)?;
     let mut content = String::new();
     toml.read_to_string(&mut content)?;
@@ -238,21 +241,14 @@ fn copy_dependencies(toml_path: &PathBuf, guest_toml_path: &PathBuf) -> io::Resu
 }
 
 pub fn prepare_workspace(
-    guest_path: &PathBuf,
-    workspace_guest_dir: &PathBuf,
-    program_toml_dir: &PathBuf,
-    workspace_host_dir: &PathBuf,
-    host_toml_dir: &PathBuf,
-    base_host_toml_dir: &PathBuf,
-    base_guest_toml_dir: &PathBuf,
+    guest_path: &Path,
+    workspace_guest_dir: &Path,
+    program_toml_dir: &Path,
+    workspace_host_dir: &Path,
+    host_toml_dir: &Path,
+    base_host_toml_dir: &Path,
+    base_guest_toml_dir: &Path,
 ) -> io::Result<()> {
-    // Create proof_data directory
-    //TODO: const
-    let proof_data_dir = PathBuf::from("./proof_data");
-    if !proof_data_dir.exists() {
-        std::fs::create_dir_all(proof_data_dir)
-            .unwrap_or(info!("saving generated proofs to `proof_data`"));
-    }
     let workspace_guest_src_dir = workspace_guest_dir.join("src");
     let workspace_host_src_dir = workspace_host_dir.join("src");
     if let Err(e) = fs::remove_dir_all(&workspace_guest_src_dir) {
@@ -280,14 +276,14 @@ pub fn prepare_workspace(
     }
 
     // Copy Cargo.toml for zkVM
-    fs::copy(base_guest_toml_dir, &program_toml_dir)?;
+    fs::copy(base_guest_toml_dir, program_toml_dir)?;
     println!("{:?} {:?}", base_guest_toml_dir, program_toml_dir);
-    fs::copy(base_host_toml_dir, &host_toml_dir)?;
+    fs::copy(base_host_toml_dir, host_toml_dir)?;
 
     // Select dependencies from the
     let toml_path = guest_path.join("Cargo.toml");
-    copy_dependencies(&toml_path, &program_toml_dir)?;
-    copy_dependencies(&toml_path, &host_toml_dir)?;
+    copy_dependencies(&toml_path, program_toml_dir)?;
+    copy_dependencies(&toml_path, host_toml_dir)?;
 
     println!("something");
     Ok(())

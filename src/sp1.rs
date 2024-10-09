@@ -1,5 +1,8 @@
 use std::{
-    fs, io::{self, Write}, path::PathBuf, process::{Command, ExitStatus}
+    fs,
+    io::{self, Write},
+    path::PathBuf,
+    process::{Command, ExitStatus},
 };
 
 use crate::utils;
@@ -34,7 +37,13 @@ pub const SP1_HOST_READ: &str = "proof.public_values.read();";
 pub const SP1_IO_READ: &str = "sp1_zkvm::io::read();";
 pub const SP1_IO_COMMIT: &str = "sp1_zkvm::io::commit";
 
-pub fn prepare_host(input: &str, output: &str, imports: &str, host_dir: &PathBuf, host_main: &PathBuf) -> io::Result<()> {
+pub fn prepare_host(
+    input: &str,
+    output: &str,
+    imports: &str,
+    host_dir: &PathBuf,
+    host_main: &PathBuf,
+) -> io::Result<()> {
     let mut host_program = imports.to_string();
     let contents = fs::read_to_string(host_dir)?;
 
@@ -51,14 +60,13 @@ pub fn prepare_host(input: &str, output: &str, imports: &str, host_dir: &PathBuf
     let host_program = host_program.replace(utils::IO_OUT, SP1_HOST_READ);
 
     // Write to host
-    let mut file = fs::File::create(&host_main)?;
+    let mut file = fs::File::create(host_main)?;
     file.write_all(host_program.as_bytes())?;
     Ok(())
 }
 
 /// Generates SP1 proof and ELF
 pub fn generate_sp1_proof(script_dir: &PathBuf, current_dir: &PathBuf) -> io::Result<ExitStatus> {
-
     Command::new("cargo")
         .arg("run")
         .arg("--release")

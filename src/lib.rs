@@ -7,15 +7,16 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use aligned_sdk::core::types::{
-    AlignedVerificationData, Network, ProvingSystemId, VerificationData,
+    AlignedVerificationData, Network, PriceEstimate, ProvingSystemId, VerificationData,
 };
 use aligned_sdk::sdk::{
-    deposit_to_aligned, get_chain_id, get_next_nonce, submit_and_wait_verification,
+    deposit_to_aligned, estimate_fee, get_balance_in_aligned, get_chain_id, get_next_nonce,
+    submit_and_wait_verification,
 };
 use clap::{Args, ValueEnum};
 use dialoguer::Confirm;
 use ethers::prelude::*;
-use ethers::providers::{Http, Provider};
+use ethers::providers::Http;
 use ethers::signers::LocalWallet;
 use ethers::types::U256;
 
@@ -25,6 +26,8 @@ pub mod utils;
 
 const BATCHER_URL: &str = "wss://batcher.alignedlayer.com";
 
+// Make proof_data path optional
+// Make keystore unneeded
 #[derive(Args, Debug)]
 pub struct ProofArgs {
     pub guest_path: String,
@@ -35,7 +38,7 @@ pub struct ProofArgs {
         long = "keystore-path",
         required_if_eq("submit_to_aligned", "true")
     )]
-    pub keystore_path: PathBuf,
+    pub keystore_path: Option<PathBuf>,
     #[clap(
         name = "URL of an Ethereum RPC Node",
         long = "rpc-url",
@@ -49,12 +52,6 @@ pub struct ProofArgs {
     )]
     pub network: NetworkArg,
     #[clap(
-        name = "The maximum Max Fee payment for proof submission to Aligned",
-        long = "max-fee",
-        default_value("100000000000000")
-    )]
-    pub max_fee: u128,
-    #[clap(
         name = "Payment send to the BatcherServicContract to fund Proof submission (Wei)",
         long = "batcher-payment",
         default_value("4000000000000000")
@@ -67,10 +64,16 @@ pub struct ProofArgs {
     pub precompiles: bool,
     #[arg(
         name = "Aligned verification data directory Path",
-        long = "aligned_verification_data_path",
+        long = "aligned-verification-data-path",
         default_value = "./aligned_verification_data/"
     )]
-    batch_inclusion_data_directory_path: String,
+    pub batch_inclusion_data_directory_path: String,
+    #[arg(
+        name = "Proof data directory path",
+        long = "proof-data-path",
+        default_value = "./proof_data"
+    )]
+    pub proof_data_directory_path: String,
 }
 
 #[derive(Debug, Clone, ValueEnum, Copy)]
@@ -101,7 +104,9 @@ pub async fn submit_proof_to_aligned(
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
 
     let network: Network = args.network.into();
-    let local_wallet = LocalWallet::decrypt_keystore(&args.keystore_path, keystore_password)
+    //Required if submission enabled. Therefore we unwrap().
+    let keystore_path  = args.keystore_path.clone().unwrap();
+    let local_wallet = LocalWallet::decrypt_keystore(&keystore_path, keystore_password)
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
     let chain_id = get_chain_id(&args.rpc_url).await?;
     let wallet = local_wallet.with_chain_id(chain_id);
@@ -112,6 +117,7 @@ pub async fn submit_proof_to_aligned(
     let elf_data = std::fs::read(elf_path)
         .map_err(|e| AlignedError::SubmitError(SubmitError::GenericError(e.to_string())))?;
 
+    // Public inputs are optional.
     let pub_input = match pub_input_path {
         Some(path) => Some(
             std::fs::read(path)
@@ -120,41 +126,81 @@ pub async fn submit_proof_to_aligned(
         None => None,
     };
 
-    let provider = Provider::<Http>::try_from(&args.rpc_url).map_err(|e| {
-        AlignedError::SubmitError(SubmitError::EthereumProviderError(e.to_string()))
-    })?;
+    let provider = Provider::<Http>::try_from(&args.rpc_url)
+        .map_err(|e| SubmitError::EthereumProviderError(e.to_string()))?;
 
     let signer = SignerMiddleware::new(provider.clone(), wallet.clone());
 
-    let payment = format_units(args.batcher_payment, "ether").map_err(|e| {
-        error!("Unable to convert batcher payment amount, please convert to units of Wei");
+    // Estimate fee for proof based on default price estimate.
+    let estimated_fee = estimate_fee(&args.rpc_url, PriceEstimate::Default).await?;
+
+    let user_address = wallet.address();
+    //TODO: Need to implement Aligned Error for Balance Error
+    let user_balance = get_balance_in_aligned(user_address, &args.rpc_url, network)
+        .await
+        .map_err(|_| {
+            SubmitError::GenericError("Failed to retrive user balance from Aligned".to_string())
+        })?;
+
+    let format_estimated_fee = format_units(estimated_fee, "ether").map_err(|e| {
+        error!("Unable to convert estimate proof submision price");
         SubmitError::GenericError(e.to_string())
     })?;
 
-    if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
-        .with_prompt(format!("We are going to pay {:?} eth for the proof submission to aligned. Do you want to continue?", payment))
-        .interact()
-        .map_err(|e | {
-            error!("Failed to read user input"); 
-            SubmitError::GenericError(e.to_string())
-        })? {
-       return Err(SubmitError::GenericError("Batcher Payment cancelled".to_string()))?;
+    let format_user_balance = format_units(user_balance, "ether").map_err(|e| {
+        error!("Unable to convert estimate proof submision price");
+        SubmitError::GenericError(e.to_string())
+    })?;
+
+    if user_balance < estimated_fee {
+        info!("Insufficient Balance balance for {:?}: User Balance {:?} eth  < Proof Submission Fee {:?} eth", user_address, format_user_balance, format_estimated_fee);
+        if Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+            .with_prompt(format!(
+                "Would you like to deposit {:?} eth to Aligned to fund proof submission?",
+                args.batcher_payment
+            ))
+            .interact()
+            .map_err(|e| {
+                error!("Failed to read user input");
+                SubmitError::GenericError(e.to_string())
+            })?
+        {
+            info!("Submitting Payment to Batcher");
+            let Ok(tx_receipt) =
+                deposit_to_aligned(U256::from(args.batcher_payment), signer, network).await
+            else {
+                return Err(SubmitError::GenericError(
+                    "Failed to Deposit Funds into the Batcher".to_string(),
+                ))?;
+            };
+            info!(
+                "Payment sent to the batcher successfully. Tx: 0x{:x}",
+                tx_receipt.transaction_hash
+            );
+        } else {
+            info!("Batcher Payment Cancelled");
+            return Err(SubmitError::GenericError(
+                "Insufficient User Balance on Aligned".to_string(),
+            ))?;
+        }
     }
 
-    info!("Submitting Payment to Batcher");
-    let Ok(tx_receipt) =
-        deposit_to_aligned(U256::from(args.batcher_payment), signer, network).await
-    else {
+    if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+        .with_prompt(format!(
+            "Would you like to pay {:?} eth to submit your proof to Aligned?",
+            format_estimated_fee
+        ))
+        .interact()
+        .map_err(|e| {
+            error!("Failed to read user input");
+            SubmitError::GenericError(e.to_string())
+        })?
+    {
+        info!("User declined the submition cost");
         return Err(SubmitError::GenericError(
-            "Failed to Deposit Funds into the Batcher".to_string(),
+            "User declined the submition cost".to_string(),
         ))?;
-    };
-    info!(
-        "Payment sent to the batcher successfully. Tx: 0x{:x}",
-        tx_receipt.transaction_hash
-    );
-
-    let max_fee = U256::from(args.max_fee);
+    }
 
     let verification_data = VerificationData {
         proving_system: proof_system_id,
@@ -178,7 +224,7 @@ pub async fn submit_proof_to_aligned(
         &args.rpc_url,
         network,
         &verification_data,
-        max_fee,
+        estimated_fee,
         wallet,
         nonce,
     )
