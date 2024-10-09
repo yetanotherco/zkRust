@@ -38,7 +38,7 @@ pub fn prepend(file_path: &str, text_to_prepend: &str) -> io::Result<()> {
     Ok(())
 }
 
-pub fn replace(file_path: &str, search_string: &str, replace_string: &str) -> io::Result<()> {
+pub fn replace(file_path: &PathBuf, search_string: &str, replace_string: &str) -> io::Result<()> {
     // Read the contents of the file
     let mut contents = String::new();
     fs::File::open(file_path)?.read_to_string(&mut contents)?;
@@ -91,7 +91,7 @@ pub fn insert(target_file: &str, text: &str, search_string: &str) -> io::Result<
 }
 
 //Note: Works with a one off '{' not with '}'
-pub fn extract_function_bodies(file_path: &str, functions: Vec<String>) -> io::Result<Vec<String>> {
+pub fn extract_function_bodies(file_path: &PathBuf, functions: Vec<String>) -> io::Result<Vec<String>> {
     // Read the contents of the target file
     let mut code = String::new();
     fs::File::open(file_path)?.read_to_string(&mut code)?;
@@ -212,7 +212,7 @@ fn handle_char(ch: char, stack: &mut Vec<&str>) -> bool {
     false
 }
 
-fn copy_dependencies(toml_path: &str, guest_toml_path: &str) -> io::Result<()> {
+fn copy_dependencies(toml_path: &PathBuf, guest_toml_path: &PathBuf) -> io::Result<()> {
     let mut toml = std::fs::File::open(toml_path)?;
     let mut content = String::new();
     toml.read_to_string(&mut content)?;
@@ -238,22 +238,23 @@ fn copy_dependencies(toml_path: &str, guest_toml_path: &str) -> io::Result<()> {
 }
 
 pub fn prepare_workspace(
-    guest_path: &str,
-    workspace_guest_dir: &str,
-    program_toml_dir: &str,
-    workspace_host_dir: &str,
-    host_toml_dir: &str,
-    base_host_toml_dir: &str,
-    base_guest_toml_dir: &str,
+    guest_path: &PathBuf,
+    workspace_guest_dir: &PathBuf,
+    program_toml_dir: &PathBuf,
+    workspace_host_dir: &PathBuf,
+    host_toml_dir: &PathBuf,
+    base_host_toml_dir: &PathBuf,
+    base_guest_toml_dir: &PathBuf,
 ) -> io::Result<()> {
     // Create proof_data directory
+    //TODO: const
     let proof_data_dir = PathBuf::from("./proof_data");
     if !proof_data_dir.exists() {
-        std::fs::create_dir_all("./proof_data")
-            .unwrap_or(info!("saving generated proofs to `proof_data/`"));
+        std::fs::create_dir_all(proof_data_dir)
+            .unwrap_or(info!("saving generated proofs to `proof_data`"));
     }
-    let workspace_guest_src_dir = format!("{}/src/", workspace_guest_dir);
-    let workspace_host_src_dir = format!("{}/src/", workspace_host_dir);
+    let workspace_guest_src_dir = workspace_guest_dir.join("src");
+    let workspace_host_src_dir = workspace_host_dir.join("src");
     if let Err(e) = fs::remove_dir_all(&workspace_guest_src_dir) {
         if e.kind() != ErrorKind::NotFound {
             return Err(e);
@@ -265,34 +266,35 @@ pub fn prepare_workspace(
         }
     }
     // Copy src/ directory
-    let src_dir_path = format!("{}/src/", guest_path);
+    let src_dir_path = guest_path.join("src");
     copy_dir_all(&src_dir_path, workspace_guest_src_dir)?;
     copy_dir_all(&src_dir_path, workspace_host_src_dir)?;
 
-    //TODO: copy this to one directory up....
     // Copy lib/ if present
-    let lib_dir_path = format!("{}/lib/", guest_path);
+    let lib_dir_path = guest_path.join("lib");
     if Path::new(&lib_dir_path).exists() {
-        let workspace_guest_lib_dir = format!("{}/lib/", workspace_guest_dir);
-        let workspace_host_lib_dir = format!("{}/lib/", workspace_host_dir);
+        let workspace_guest_lib_dir = workspace_guest_dir.join("lib");
+        let workspace_host_lib_dir = workspace_host_dir.join("lib");
         copy_dir_all(&lib_dir_path, workspace_guest_lib_dir)?;
         copy_dir_all(&lib_dir_path, workspace_host_lib_dir)?;
     }
 
     // Copy Cargo.toml for zkVM
-    fs::copy(base_guest_toml_dir, program_toml_dir)?;
-    fs::copy(base_host_toml_dir, host_toml_dir)?;
+    fs::copy(base_guest_toml_dir, &program_toml_dir)?;
+    println!("{:?} {:?}", base_guest_toml_dir, program_toml_dir);
+    fs::copy(base_host_toml_dir, &host_toml_dir)?;
 
     // Select dependencies from the
-    let toml_path = format!("{}/Cargo.toml", guest_path);
-    copy_dependencies(&toml_path, program_toml_dir)?;
-    copy_dependencies(&toml_path, host_toml_dir)?;
+    let toml_path = guest_path.join("Cargo.toml");
+    copy_dependencies(&toml_path, &program_toml_dir)?;
+    copy_dependencies(&toml_path, &host_toml_dir)?;
 
+    println!("something");
     Ok(())
 }
 
 //TODO: refactor this to eliminate the clone at each step.
-pub fn get_imports(filename: &str) -> io::Result<String> {
+pub fn get_imports(filename: &PathBuf) -> io::Result<String> {
     // Open the file
     let file = File::open(filename)?;
     let mut lines = BufReader::new(file).lines();
@@ -328,7 +330,7 @@ pub fn get_imports(filename: &str) -> io::Result<String> {
     Ok(imports)
 }
 
-pub fn extract_regex(file_path: &str, regex: &str) -> io::Result<Vec<String>> {
+pub fn extract_regex(file_path: &PathBuf, regex: &str) -> io::Result<Vec<String>> {
     let file = fs::File::open(file_path)?;
     let reader = io::BufReader::new(file);
 
@@ -348,7 +350,7 @@ pub fn extract_regex(file_path: &str, regex: &str) -> io::Result<Vec<String>> {
 }
 
 //Change to remove regex and remove the marker
-pub fn remove_lines(file_path: &str, target: &str) -> io::Result<()> {
+pub fn remove_lines(file_path: &PathBuf, target: &str) -> io::Result<()> {
     // Read the file line by line
     let file = fs::File::open(file_path)?;
     let reader = io::BufReader::new(file);
@@ -402,7 +404,7 @@ pub fn prepare_guest(
     program_header: &str,
     io_read_header: &str,
     io_commit_header: &str,
-    guest_main_file_path: &str,
+    guest_main_file_path: &PathBuf,
 ) -> io::Result<()> {
     let mut guest_program = program_header.to_string();
     guest_program.push_str(imports);

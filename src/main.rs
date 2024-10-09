@@ -5,6 +5,7 @@ use log::error;
 use log::info;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::path::PathBuf;
 use tokio::io;
 use zkRust::{risc0, sp1, submit_proof_to_aligned, utils, ProofArgs};
 
@@ -32,25 +33,36 @@ async fn main() -> io::Result<()> {
     match &cli.command {
         Commands::ProveSp1(args) => {
             info!("Proving with SP1, program in: {}", args.guest_path);
-
             // Perform sanitation checks on directory
             if utils::validate_directory_structure(&args.guest_path) {
+                //Ensure `~/.zkRust/workspaces/exists
+                let Some(home_dir) = dirs::home_dir() else {
+                    error!("Failed to locate Home Dir");
+                    return Ok(());
+                };
+                let Ok(current_dir) = std::env::current_dir() else {
+                    error!("Failed to get Current Directory");
+                    return Ok(());
+                };
+                let home_dir = home_dir.join(".zkRust");
                 utils::prepare_workspace(
-                    &args.guest_path,
-                    sp1::SP1_SRC_DIR,
-                    sp1::SP1_GUEST_CARGO_TOML,
-                    "./workspaces/sp1/script",
-                    "./workspaces/sp1/script/Cargo.toml",
-                    sp1::SP1_BASE_HOST_CARGO_TOML,
-                    sp1::SP1_BASE_GUEST_CARGO_TOML,
+                    &PathBuf::from(&args.guest_path),
+                    &home_dir.join(sp1::SP1_SRC_DIR),
+                    &home_dir.join(sp1::SP1_GUEST_CARGO_TOML),
+                    &home_dir.join("workspaces/sp1/script"),
+                    &home_dir.join("workspaces/sp1/script/Cargo.toml"),
+                    &home_dir.join(sp1::SP1_BASE_HOST_CARGO_TOML),
+                    &home_dir.join(sp1::SP1_BASE_GUEST_CARGO_TOML),
                 )?;
 
-                let Ok(imports) = utils::get_imports(sp1::SP1_GUEST_MAIN) else {
+                let Ok(imports) = utils::get_imports(&home_dir.join(sp1::SP1_GUEST_MAIN)) else {
                     error!("Failed to Extract Imports");
                     return Ok(());
                 };
+
+                let main_path = home_dir.join(&sp1::SP1_GUEST_MAIN);
                 let Ok(function_bodies) = utils::extract_function_bodies(
-                    sp1::SP1_GUEST_MAIN,
+                    &main_path,
                     vec![
                         "fn main()".to_string(),
                         "fn input()".to_string(),
@@ -73,22 +85,23 @@ async fn main() -> io::Result<()> {
                     sp1::SP1_GUEST_PROGRAM_HEADER,
                     sp1::SP1_IO_READ,
                     sp1::SP1_IO_COMMIT,
-                    sp1::SP1_GUEST_MAIN,
+                    &home_dir.join(sp1::SP1_GUEST_MAIN),
                 )?;
-                sp1::prepare_host(&function_bodies[1], &function_bodies[2], &imports)?;
+                sp1::prepare_host(&function_bodies[1], &function_bodies[2], &imports, &home_dir.join(sp1::SP1_BASE_HOST), &home_dir.join(sp1::SP1_HOST_MAIN))?;
 
                 if args.precompiles {
                     let mut toml_file = OpenOptions::new()
                         .append(true) // Open the file in append mode
-                        .open(sp1::SP1_GUEST_CARGO_TOML)?;
+                        .open(&home_dir.join(sp1::SP1_GUEST_CARGO_TOML))?;
 
                     writeln!(toml_file, "{}", sp1::SP1_ACCELERATION_IMPORT)?;
                 }
 
-                if sp1::generate_sp1_proof()?.success() {
+                let script_dir = home_dir.join(sp1::SP1_SCRIPT_DIR);
+                if sp1::generate_sp1_proof(&script_dir, &current_dir)?.success() {
                     info!("SP1 proof and ELF generated");
 
-                    utils::replace(sp1::SP1_GUEST_CARGO_TOML, sp1::SP1_ACCELERATION_IMPORT, "")?;
+                    utils::replace(&home_dir.join(sp1::SP1_GUEST_CARGO_TOML), sp1::SP1_ACCELERATION_IMPORT, "")?;
 
                     // Submit to aligned
                     if args.submit_to_aligned {
@@ -107,16 +120,16 @@ async fn main() -> io::Result<()> {
                         info!("SP1 proof submitted and verified on Aligned");
                     }
 
-                    std::fs::copy(sp1::SP1_BASE_HOST_FILE, sp1::SP1_HOST_MAIN).map_err(|e| {
+                    std::fs::copy(home_dir.join(sp1::SP1_BASE_HOST_FILE), &home_dir.join(sp1::SP1_HOST_MAIN)).map_err(|e| {
                         error!("Failed to clear SP1 Host File");
                         e
                     })?;
-
                     return Ok(());
                 }
                 info!("SP1 proof generation failed");
+
                 // Clear host
-                std::fs::copy(sp1::SP1_BASE_HOST_FILE, sp1::SP1_HOST_MAIN)?;
+                std::fs::copy(&home_dir.join(sp1::SP1_BASE_HOST_FILE), &home_dir.join(sp1::SP1_HOST_MAIN))?;
                 return Ok(());
             } else {
                 error!("zkRust Directory structure incorrect please consult the README",);
@@ -128,23 +141,34 @@ async fn main() -> io::Result<()> {
             info!("Proving with Risc0, program in: {}", args.guest_path);
 
             // Perform sanitation checks on directory
-            if utils::validate_directory_structure(&args.guest_path) {
+            if utils::validate_directory_structure(&args.guest_path) { 
+                //Ensure `~/.zkRust/workspaces/exists
+                let Some(home_dir) = dirs::home_dir() else {
+                    error!("Failed to Locate Home Dir");
+                    return Ok(());
+                };
+                let Ok(current_dir) = std::env::current_dir() else {
+                    error!("Failed to get Current Directory");
+                    return Ok(());
+                };
+                let home_dir = home_dir.join(".zkRust");
                 utils::prepare_workspace(
-                    &args.guest_path,
-                    risc0::RISC0_SRC_DIR,
-                    risc0::RISC0_GUEST_CARGO_TOML,
-                    "./workspaces/risc0/host",
-                    "./workspaces/risc0/host/Cargo.toml",
-                    risc0::RISC0_BASE_HOST_CARGO_TOML,
-                    risc0::RISC0_BASE_GUEST_CARGO_TOML,
+                    &PathBuf::from(&args.guest_path),
+                    &home_dir.join(risc0::RISC0_SRC_DIR),
+                    &home_dir.join(risc0::RISC0_GUEST_CARGO_TOML),
+                    &home_dir.join("workspaces/risc0/host"),
+                    &home_dir.join("workspaces/risc0/host/Cargo.toml"),
+                    &home_dir.join(risc0::RISC0_BASE_HOST_CARGO_TOML),
+                    &home_dir.join(risc0::RISC0_BASE_GUEST_CARGO_TOML),
                 )?;
 
-                let Ok(imports) = utils::get_imports(risc0::RISC0_GUEST_MAIN) else {
+                let Ok(imports) = utils::get_imports(&home_dir.join(risc0::RISC0_GUEST_MAIN)) else {
                     error!("Failed to Extract Imports");
                     return Ok(());
                 };
+                let main_path = home_dir.join(&risc0::RISC0_GUEST_MAIN);
                 let Ok(function_bodies) = utils::extract_function_bodies(
-                    risc0::RISC0_GUEST_MAIN,
+                    &main_path,
                     vec![
                         "fn main()".to_string(),
                         "fn input()".to_string(),
@@ -168,20 +192,23 @@ async fn main() -> io::Result<()> {
                     risc0::RISC0_GUEST_PROGRAM_HEADER,
                     risc0::RISC0_IO_READ,
                     risc0::RISC0_IO_COMMIT,
-                    risc0::RISC0_GUEST_MAIN,
+                    &home_dir.join(risc0::RISC0_GUEST_MAIN),
                 )?;
-                risc0::prepare_host(&function_bodies[1], &function_bodies[2], &imports)?;
+                risc0::prepare_host(&function_bodies[1], &function_bodies[2], &imports, &home_dir.join(risc0::RISC0_BASE_HOST), &home_dir.join(risc0::RISC0_HOST_MAIN))?;
 
                 if args.precompiles {
                     let mut toml_file = OpenOptions::new()
                         .append(true)
-                        .open(risc0::RISC0_GUEST_CARGO_TOML)?;
+                        .open(&home_dir.join(risc0::RISC0_GUEST_CARGO_TOML))?;
 
                     writeln!(toml_file, "{}", risc0::RISC0_ACCELERATION_IMPORT)?;
                 }
 
-                if risc0::generate_risc0_proof()?.success() {
+                let workspace_dir = home_dir.join(risc0::RISC0_WORKSPACE_DIR);
+                if risc0::generate_risc0_proof(&workspace_dir, &current_dir)?.success() {
                     info!("Risc0 proof and Image ID generated");
+
+                    utils::replace(&home_dir.join(risc0::RISC0_GUEST_CARGO_TOML), risc0::RISC0_ACCELERATION_IMPORT, "")?;
 
                     // Submit to aligned
                     if args.submit_to_aligned {
@@ -202,19 +229,18 @@ async fn main() -> io::Result<()> {
                     }
 
                     // Clear Host file
-                    std::fs::copy(risc0::RISC0_BASE_HOST_FILE, risc0::RISC0_HOST_MAIN).map_err(
+                    std::fs::copy(&home_dir.join(risc0::RISC0_BASE_HOST_FILE), &home_dir.join(risc0::RISC0_HOST_MAIN)).map_err(
                         |e| {
                             error!("Failed to Clear Risc0 Host File");
                             e
                         },
                     )?;
-
                     return Ok(());
                 }
                 info!("Risc0 proof generation failed");
 
                 // Clear Host file
-                std::fs::copy(risc0::RISC0_BASE_HOST_FILE, risc0::RISC0_HOST_MAIN)?;
+                std::fs::copy(&home_dir.join(risc0::RISC0_BASE_HOST_FILE), &home_dir.join(risc0::RISC0_HOST_MAIN))?;
                 return Ok(());
             } else {
                 error!("zkRust Directory structure incorrect please consult the README",);

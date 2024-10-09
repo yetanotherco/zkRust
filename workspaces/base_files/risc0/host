@@ -4,14 +4,9 @@ use methods::{METHOD_ELF, METHOD_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv};
 use std::io::Write;
 
-const PROOF_FILE_PATH: &str = "../../proof_data/risc0/risc0.proof";
-const IMAGE_ID_FILE_PATH: &str = "../../proof_data/risc0/risc0.imageid";
-const PUBLIC_INPUT_FILE_PATH: &str = "../../proof_data/risc0/risc0_pub_input.pub";
-
 fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
-        .init();
+    let args: Vec<String> = std::env::args().collect();
+    let current_dir = std::path::PathBuf::from(args[1].clone());
 
     // INPUT //
 
@@ -23,21 +18,20 @@ fn main() {
     // Produce a receipt by proving the specified ELF binary.
     let receipt = prover.prove(env, METHOD_ELF).unwrap().receipt;
 
-    let verification_result = receipt.verify(METHOD_ID).is_ok();
-
-    println!("Verification result: {}", verification_result);
+    receipt.verify(METHOD_ID).unwrap();
 
     // OUTPUT //
 
     let serialized = bincode::serialize(&receipt).unwrap();
 
-    std::fs::create_dir_all("../../proof_data/risc0").expect("Failed to create proof_data/sp1");
+    //TODO(pat): remove expects
+    std::fs::create_dir_all(current_dir.join("proof_data/risc0")).expect("Failed to create proof_data/sp1");
     let mut proof_file =
-        std::fs::File::create(PROOF_FILE_PATH).expect("Failed to create SP1 elf file");
+        std::fs::File::create(&current_dir.join("proof_data/risc0/risc0.proof")).expect("Failed to create SP1 elf file");
     let mut image_id_file =
-        std::fs::File::create(IMAGE_ID_FILE_PATH).expect("Failed to create SP1 elf file");
+        std::fs::File::create(&current_dir.join("proof_data/risc0/risc0.imageid")).expect("Failed to create SP1 elf file");
     let mut public_input_file =
-        std::fs::File::create(PUBLIC_INPUT_FILE_PATH).expect("Failed to create SP1 elf file");
+        std::fs::File::create(&current_dir.join("proof_data/risc0/risc0_pub_input.pub")).expect("Failed to create SP1 elf file");
     proof_file
         .write_all(&serialized)
         .expect("Failed write Risc0 proof to file");

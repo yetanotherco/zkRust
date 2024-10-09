@@ -1,21 +1,19 @@
 use std::{
-    fs,
-    io::{self, Write},
-    process::{Command, ExitStatus},
+    fs, io::{self, Write}, path::PathBuf, process::{Command, ExitStatus}
 };
 
 use crate::utils;
 
 /// SP1 workspace directories
-pub const SP1_SCRIPT_DIR: &str = "./workspaces/sp1/script";
-pub const SP1_SRC_DIR: &str = "./workspaces/sp1/program";
-pub const SP1_GUEST_MAIN: &str = "./workspaces/sp1/program/src/main.rs";
-pub const SP1_HOST_MAIN: &str = "./workspaces/sp1/script/src/main.rs";
-pub const SP1_BASE_GUEST_CARGO_TOML: &str = "./workspaces/base_files/sp1/cargo_guest";
-pub const SP1_BASE_HOST_CARGO_TOML: &str = "./workspaces/base_files/sp1/cargo_host";
-pub const SP1_BASE_HOST: &str = include_str!("../workspaces/base_files/sp1/host");
-pub const SP1_BASE_HOST_FILE: &str = "./workspaces/base_files/sp1/host";
-pub const SP1_GUEST_CARGO_TOML: &str = "./workspaces/sp1/program/Cargo.toml";
+pub const SP1_SCRIPT_DIR: &str = "workspaces/sp1/script";
+pub const SP1_SRC_DIR: &str = "workspaces/sp1/program";
+pub const SP1_GUEST_MAIN: &str = "workspaces/sp1/program/src/main.rs";
+pub const SP1_HOST_MAIN: &str = "workspaces/sp1/script/src/main.rs";
+pub const SP1_BASE_GUEST_CARGO_TOML: &str = "workspaces/base_files/sp1/cargo_guest";
+pub const SP1_BASE_HOST_CARGO_TOML: &str = "workspaces/base_files/sp1/cargo_host";
+pub const SP1_BASE_HOST: &str = "workspaces/base_files/sp1/host";
+pub const SP1_BASE_HOST_FILE: &str = "workspaces/base_files/sp1/host";
+pub const SP1_GUEST_CARGO_TOML: &str = "workspaces/sp1/program/Cargo.toml";
 
 // Proof data generation paths
 pub const SP1_ELF_PATH: &str = "./proof_data/sp1/sp1.elf";
@@ -36,9 +34,11 @@ pub const SP1_HOST_READ: &str = "proof.public_values.read();";
 pub const SP1_IO_READ: &str = "sp1_zkvm::io::read();";
 pub const SP1_IO_COMMIT: &str = "sp1_zkvm::io::commit";
 
-pub fn prepare_host(input: &str, output: &str, imports: &str) -> io::Result<()> {
+pub fn prepare_host(input: &str, output: &str, imports: &str, host_dir: &PathBuf, host_main: &PathBuf) -> io::Result<()> {
     let mut host_program = imports.to_string();
-    host_program.push_str(SP1_BASE_HOST);
+    let contents = fs::read_to_string(host_dir)?;
+
+    host_program.push_str(&contents);
 
     // Insert input body
     let host_program = host_program.replace(utils::HOST_INPUT, input);
@@ -51,18 +51,19 @@ pub fn prepare_host(input: &str, output: &str, imports: &str) -> io::Result<()> 
     let host_program = host_program.replace(utils::IO_OUT, SP1_HOST_READ);
 
     // Write to host
-    let mut file = fs::File::create(SP1_HOST_MAIN)?;
+    let mut file = fs::File::create(&host_main)?;
     file.write_all(host_program.as_bytes())?;
     Ok(())
 }
 
 /// Generates SP1 proof and ELF
-pub fn generate_sp1_proof() -> io::Result<ExitStatus> {
-    let guest_path = fs::canonicalize(SP1_SCRIPT_DIR)?;
+pub fn generate_sp1_proof(script_dir: &PathBuf, current_dir: &PathBuf) -> io::Result<ExitStatus> {
 
     Command::new("cargo")
         .arg("run")
         .arg("--release")
-        .current_dir(guest_path)
+        .arg("--")
+        .arg(current_dir)
+        .current_dir(script_dir)
         .status()
 }
