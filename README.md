@@ -14,6 +14,12 @@ zkRust can also be installed directly by downloading the latest release binaries
 curl -L https://raw.githubusercontent.com/yetanotherco/zkRust/main/install_zkrust.sh | bash
 ```
 
+for local development install the repository dependencies.
+
+```sh
+make install
+```
+
 ## Quickstart
 
 To get started you can create a workspace for your project in zkRust by running:
