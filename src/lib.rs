@@ -26,8 +26,7 @@ pub mod risc0;
 pub mod sp1;
 pub mod utils;
 
-const BATCHER_URL: &str = "wss://batcher.alignedlayer.com";
-
+ // LOCAL_BATCHER: &str = "ws://localhost:8080";
 // Make proof_data path optional
 // Make keystore unneeded
 #[derive(Args, Debug)]
@@ -76,6 +75,12 @@ pub struct ProofArgs {
         default_value = "./proof_data"
     )]
     pub proof_data_directory_path: String,
+    #[clap(
+        name = "URL of the Aligned Batcher",
+        long = "batcher-url",
+        default_value("wss://batcher.alignedlayer.com")
+    )]
+    pub batcher_url: String,
 }
 
 #[derive(Debug, Clone, ValueEnum, Copy)]
@@ -222,7 +227,7 @@ pub async fn submit_proof_to_aligned(
     info!("Submitting proof to Aligned for Verification");
 
     let aligned_verification_data = submit_and_wait_verification(
-        BATCHER_URL,
+        &args.batcher_url,
         &args.rpc_url,
         network,
         &verification_data,

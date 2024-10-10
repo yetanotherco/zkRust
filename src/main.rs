@@ -9,40 +9,6 @@ use std::path::PathBuf;
 use tokio::io;
 use zkRust::{risc0, sp1, submit_proof_to_aligned, utils, ProofArgs};
 
-/*
-Stuff 
-    - Better formatting.
-    - Banner.
-    - Special Progress Bar -> Capybara's.
-    - Green.
-Commands
-- VM_ARGS
-    - Prove
-        - rpc_url
-        - wallet
-        - Send to Aligned
-        - Vkey
-        - Image_id
-        - ELF
-        - Public Input
-- Execute
-- Build
-- Trace?
-- Run
-
-Docker builds 
-
-Need:
-    - Caching of generated main
-    - Docker Builds
-Plan:
-    - zkRust I/O is a buffer that we pass into each VM
-        - Works for Input case.
-        - How to do this for committed values?
-    - Generate ELF File for each format
-        - Risc0 -> Convert to ImageID
-*/
-
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]

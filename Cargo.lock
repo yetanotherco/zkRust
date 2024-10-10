@@ -7157,6 +7157,7 @@ dependencies = [
  "regex",
  "risc0-zkvm",
  "rpassword",
+ "serde_json",
  "sp1-sdk",
  "tokio",
  "zk_rust_io",
