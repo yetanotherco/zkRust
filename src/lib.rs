@@ -166,7 +166,7 @@ pub async fn submit_proof_to_aligned(
         if Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
             .with_prompt(format!(
                 "Would you like to deposit {:?} eth into Aligned to fund proof submission?",
-                args.batcher_payment
+                estimated_fee
             ))
             .interact()
             .map_err(|e| {
@@ -176,7 +176,7 @@ pub async fn submit_proof_to_aligned(
         {
             info!("Submitting deposit to Batcher");
             let Ok(tx_receipt) =
-                deposit_to_aligned(U256::from(args.batcher_payment), signer, network).await
+                deposit_to_aligned(U256::from(estimated_fee), signer, network).await
             else {
                 return Err(SubmitError::GenericError(
                     "Failed to Deposit Funds into the Batcher".to_string(),
