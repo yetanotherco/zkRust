@@ -2,9 +2,11 @@ use aligned_sdk::communication::serialization::cbor_serialize;
 use aligned_sdk::core::errors::{AlignedError, SubmitError};
 use ethers::utils::format_units;
 use log::{error, info};
+use risc0::PUBLIC_INPUT_FILE_PATH;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+use serde_json::json;
 
 use aligned_sdk::core::types::{
     AlignedVerificationData, Network, PriceEstimate, ProvingSystemId, VerificationData,
@@ -211,14 +213,11 @@ pub async fn submit_proof_to_aligned(
         proof_generator_addr: wallet.address(),
         vm_program_code: Some(elf_data),
         verification_key: None,
-        pub_input,
+        pub_input: pub_input.clone(),
     };
 
     let nonce = get_next_nonce(&args.rpc_url, wallet.address(), network)
-        .await
-        .map_err(|e| {
-            AlignedError::SubmitError(SubmitError::EthereumProviderError(e.to_string()))
-        })?;
+        .await?;
 
     info!("Submitting proof to Aligned for Verification");
 
@@ -231,17 +230,20 @@ pub async fn submit_proof_to_aligned(
         wallet,
         nonce,
     )
-    .await
-    .map_err(|e| AlignedError::SubmitError(SubmitError::GenericError(e.to_string())))?;
+    .await?;
 
     info!("Proof Submitted to Aligned!");
     info!(
         "https://explorer.alignedlayer.com/batches/0x{}",
         hex::encode(aligned_verification_data.batch_merkle_root)
     );
+
+    // If pub_input is None return empty
+    let pub_input = pub_input.unwrap_or(vec![]);
     save_response(
         PathBuf::from(&args.batch_inclusion_data_directory_path),
         &aligned_verification_data,
+        &pub_input
     )?;
     info!(
         "Aligned Verification Data saved {:?}",
@@ -253,11 +255,11 @@ pub async fn submit_proof_to_aligned(
 fn save_response(
     batch_inclusion_data_directory_path: PathBuf,
     aligned_verification_data: &AlignedVerificationData,
+    pub_input: &[u8],
 ) -> Result<(), SubmitError> {
-    if !batch_inclusion_data_directory_path.exists() {
-        std::fs::create_dir_all(&batch_inclusion_data_directory_path)
-            .map_err(|e| SubmitError::IoError(batch_inclusion_data_directory_path.clone(), e))?;
-    }
+    std::fs::create_dir_all(&batch_inclusion_data_directory_path)
+        .map_err(|e| SubmitError::IoError(batch_inclusion_data_directory_path.clone(), e))?;
+
     let batch_merkle_root = &hex::encode(aligned_verification_data.batch_merkle_root)[..8];
     let batch_inclusion_data_file_name = batch_merkle_root.to_owned()
         + "_"
@@ -267,15 +269,33 @@ fn save_response(
     let batch_inclusion_data_path =
         batch_inclusion_data_directory_path.join(batch_inclusion_data_file_name);
 
-    let data = cbor_serialize(&aligned_verification_data)?;
+    let merkle_proof = aligned_verification_data
+        .batch_inclusion_proof
+        .merkle_path
+        .iter()
+        .map(hex::encode)
+        .collect::<Vec<String>>()
+        .join("");
+    let data = json!({
+            "proof_commitment": hex::encode(aligned_verification_data.verification_data_commitment.proof_commitment),
+            "pub_input_commitment": hex::encode(aligned_verification_data.verification_data_commitment.pub_input_commitment),
+            "program_id_commitment": hex::encode(aligned_verification_data.verification_data_commitment.proving_system_aux_data_commitment),
+            "proof_generator_addr": hex::encode(aligned_verification_data.verification_data_commitment.proof_generator_addr),
+            "batch_merkle_root": hex::encode(aligned_verification_data.batch_merkle_root),
+            "pub_input": hex::encode(pub_input),
+            "verification_data_batch_index": aligned_verification_data.index_in_batch,
+            "merkle_proof": merkle_proof,
+    });
 
     let mut file = File::create(&batch_inclusion_data_path)
         .map_err(|e| SubmitError::IoError(batch_inclusion_data_path.clone(), e))?;
-    file.write_all(data.as_slice())
+    file.write_all(serde_json::to_string_pretty(&data).unwrap().as_bytes())
         .map_err(|e| SubmitError::IoError(batch_inclusion_data_path.clone(), e))?;
+    let current_dir = std::env::current_dir().map_err(|_| SubmitError::GenericError("Failed to get current directory".to_string()))?;
+
     info!(
-        "Batch inclusion data written into {}",
-        batch_inclusion_data_path.display()
+        "Saved batch inclusion data to {:?}",
+        current_dir.join(batch_inclusion_data_path)
     );
 
     Ok(())
