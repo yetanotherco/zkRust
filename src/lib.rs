@@ -26,7 +26,6 @@ pub mod risc0;
 pub mod sp1;
 pub mod utils;
 
- // LOCAL_BATCHER: &str = "ws://localhost:8080";
 // Make proof_data path optional
 // Make keystore unneeded
 #[derive(Args, Debug)]
