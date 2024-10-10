@@ -228,8 +228,7 @@ fn copy_dependencies(toml_path: &Path, guest_toml_path: &Path) -> io::Result<()>
             let mut guest_toml = OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open(guest_toml_path)
-                .unwrap();
+                .open(guest_toml_path)?;
 
             // Write the text after the search string to the output file
             guest_toml.write_all(dependencies.as_bytes())
@@ -331,7 +330,7 @@ pub fn extract_regex(file_path: &PathBuf, regex: &str) -> io::Result<Vec<String>
     let reader = io::BufReader::new(file);
 
     let mut values = Vec::new();
-    let regex = Regex::new(regex).unwrap();
+    let regex = Regex::new(regex).map_err(io::Error::other)?;
 
     for line in reader.lines() {
         let line = line?;
