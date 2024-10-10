@@ -104,8 +104,11 @@ pub async fn submit_proof_to_aligned(
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
 
     let network: Network = args.network.into();
-    //Required if submission enabled. Therefore we unwrap().
-    let keystore_path  = args.keystore_path.clone().unwrap();
+    let Some(keystore_path) = args.keystore_path.clone() else {
+        return Err(SubmitError::GenericError(
+            "Keystore path no found. Please supply path to your local wallet keystore.".to_string(),
+        ))?;
+    };
     let local_wallet = LocalWallet::decrypt_keystore(&keystore_path, keystore_password)
         .map_err(|e| AlignedError::SubmitError(SubmitError::WalletSignerError(e.to_string())))?;
     let chain_id = get_chain_id(&args.rpc_url).await?;
@@ -118,13 +121,10 @@ pub async fn submit_proof_to_aligned(
         .map_err(|e| AlignedError::SubmitError(SubmitError::GenericError(e.to_string())))?;
 
     // Public inputs are optional.
-    let pub_input = match pub_input_path {
-        Some(path) => Some(
-            std::fs::read(path)
-                .map_err(|e| AlignedError::SubmitError(SubmitError::GenericError(e.to_string())))?,
-        ),
-        None => None,
-    };
+    let pub_input = pub_input_path
+        .map(std::fs::read)
+        .transpose()
+        .map_err(|e| SubmitError::GenericError(e.to_string()))?;
 
     let provider = Provider::<Http>::try_from(&args.rpc_url)
         .map_err(|e| SubmitError::EthereumProviderError(e.to_string()))?;
@@ -139,24 +139,27 @@ pub async fn submit_proof_to_aligned(
     let user_balance = get_balance_in_aligned(user_address, &args.rpc_url, network)
         .await
         .map_err(|_| {
-            SubmitError::GenericError("Failed to retrive user balance from Aligned".to_string())
+            SubmitError::GenericError("Failed to retrieve user balance from Aligned".to_string())
         })?;
 
     let format_estimated_fee = format_units(estimated_fee, "ether").map_err(|e| {
-        error!("Unable to convert estimate proof submision price");
+        error!("Unable to convert estimated proof submision price");
         SubmitError::GenericError(e.to_string())
     })?;
 
     let format_user_balance = format_units(user_balance, "ether").map_err(|e| {
-        error!("Unable to convert estimate proof submision price");
+        error!("Unable to convert estimated proof submision price");
         SubmitError::GenericError(e.to_string())
     })?;
 
     if user_balance < estimated_fee {
-        info!("Insufficient Balance balance for {:?}: User Balance {:?} eth  < Proof Submission Fee {:?} eth", user_address, format_user_balance, format_estimated_fee);
+        info!(
+            "Insufficient balance for {:?}: User Balance {:?} eth  < Proof Submission Fee {:?} eth",
+            user_address, format_user_balance, format_estimated_fee
+        );
         if Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
             .with_prompt(format!(
-                "Would you like to deposit {:?} eth to Aligned to fund proof submission?",
+                "Would you like to deposit {:?} eth into Aligned to fund proof submission?",
                 args.batcher_payment
             ))
             .interact()
@@ -165,7 +168,7 @@ pub async fn submit_proof_to_aligned(
                 SubmitError::GenericError(e.to_string())
             })?
         {
-            info!("Submitting Payment to Batcher");
+            info!("Submitting deposit to Batcher");
             let Ok(tx_receipt) =
                 deposit_to_aligned(U256::from(args.batcher_payment), signer, network).await
             else {
@@ -174,13 +177,13 @@ pub async fn submit_proof_to_aligned(
                 ))?;
             };
             info!(
-                "Payment sent to the batcher successfully. Tx: 0x{:x}",
+                "Funds deposited successfully to Batcher payment contract. Tx: 0x{:x}",
                 tx_receipt.transaction_hash
             );
         } else {
             info!("Batcher Payment Cancelled");
             return Err(SubmitError::GenericError(
-                "Insufficient User Balance on Aligned".to_string(),
+                "Insufficient user balance on Aligned".to_string(),
             ))?;
         }
     }
@@ -196,9 +199,9 @@ pub async fn submit_proof_to_aligned(
             SubmitError::GenericError(e.to_string())
         })?
     {
-        info!("User declined the submition cost");
+        info!("User declined to pay submission cost");
         return Err(SubmitError::GenericError(
-            "User declined the submition cost".to_string(),
+            "User declined to pay submission cost".to_string(),
         ))?;
     }
 
@@ -240,7 +243,7 @@ pub async fn submit_proof_to_aligned(
         PathBuf::from(&args.batch_inclusion_data_directory_path),
         &aligned_verification_data,
     )?;
-    println!(
+    info!(
         "Aligned Verification Data saved {:?}",
         args.batch_inclusion_data_directory_path
     );

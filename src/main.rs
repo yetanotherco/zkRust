@@ -37,17 +37,17 @@ async fn main() -> io::Result<()> {
             let proof_data_dir = PathBuf::from(&args.proof_data_directory_path);
             if !proof_data_dir.exists() {
                 std::fs::create_dir_all(proof_data_dir).unwrap_or(info!(
-                    "saving generated proofs to: {:?}",
+                    "Saving Proofs to: {:?}",
                     &args.proof_data_directory_path
                 ));
             }
             if utils::validate_directory_structure(&args.guest_path) {
                 let Some(home_dir) = dirs::home_dir() else {
-                    error!("Failed to locate Home Dir");
+                    error!("Failed to locate home directory");
                     return Ok(());
                 };
                 let Ok(current_dir) = std::env::current_dir() else {
-                    error!("Failed to get Current Directory");
+                    error!("Failed to locate current directory");
                     return Ok(());
                 };
                 let home_dir = home_dir.join(".zkRust");
@@ -62,7 +62,7 @@ async fn main() -> io::Result<()> {
                 )?;
 
                 let Ok(imports) = utils::get_imports(&home_dir.join(sp1::SP1_GUEST_MAIN)) else {
-                    error!("Failed to Extract Imports");
+                    error!("Failed to extract imports");
                     return Ok(());
                 };
 
@@ -75,7 +75,7 @@ async fn main() -> io::Result<()> {
                         "fn output()".to_string(),
                     ],
                 ) else {
-                    error!("Failed to Extract Function Bodies");
+                    error!("Failed to extract function bodies");
                     return Ok(());
                 };
                 /*
@@ -130,7 +130,7 @@ async fn main() -> io::Result<()> {
                         )
                         .await
                         .map_err(|e| {
-                            error!("Error Submitting Proof to Aligned: {:?}", e);
+                            error!("Proof not submitted to Aligned");
                             io::Error::other(e.to_string())
                         })?;
                         info!("SP1 proof submitted and verified on Aligned");
@@ -141,7 +141,7 @@ async fn main() -> io::Result<()> {
                         home_dir.join(sp1::SP1_HOST_MAIN),
                     )
                     .map_err(|e| {
-                        error!("Failed to clear SP1 Host File");
+                        error!("Failed to clear SP1 host file");
                         e
                     })?;
                     return Ok(());
@@ -155,7 +155,7 @@ async fn main() -> io::Result<()> {
                 )?;
                 return Ok(());
             } else {
-                error!("zkRust Directory structure incorrect please consult the README",);
+                error!("zkRust directory structure invalid please consult the README",);
                 return Ok(());
             }
         }
@@ -168,16 +168,16 @@ async fn main() -> io::Result<()> {
                 let proof_data_dir = PathBuf::from(&args.proof_data_directory_path);
                 if !proof_data_dir.exists() {
                     std::fs::create_dir_all(proof_data_dir).unwrap_or(info!(
-                        "saving generated proofs to: {:?}",
+                        "Saving generated proofs to: {:?}",
                         &args.proof_data_directory_path
                     ));
                 }
                 let Some(home_dir) = dirs::home_dir() else {
-                    error!("Failed to Locate Home Dir");
+                    error!("Failed to locate home directory");
                     return Ok(());
                 };
                 let Ok(current_dir) = std::env::current_dir() else {
-                    error!("Failed to get Current Directory");
+                    error!("Failed to locate current directory");
                     return Ok(());
                 };
                 let home_dir = home_dir.join(".zkRust");
@@ -193,7 +193,7 @@ async fn main() -> io::Result<()> {
 
                 let Ok(imports) = utils::get_imports(&home_dir.join(risc0::RISC0_GUEST_MAIN))
                 else {
-                    error!("Failed to Extract Imports");
+                    error!("Failed to extract imports");
                     return Ok(());
                 };
                 let main_path = home_dir.join(risc0::RISC0_GUEST_MAIN);
@@ -205,7 +205,7 @@ async fn main() -> io::Result<()> {
                         "fn output()".to_string(),
                     ],
                 ) else {
-                    error!("Failed to Extract Function Bodies");
+                    error!("Failed to extract function bodies");
                     return Ok(());
                 };
 
@@ -261,7 +261,7 @@ async fn main() -> io::Result<()> {
                         )
                         .await
                         .map_err(|e| {
-                            error!("Error Submitting Proof to Aligned: {:?}", e);
+                            error!("Error submitting proofs to Aligned: {:?}", e);
                             io::Error::other(e.to_string())
                         })?;
 
@@ -274,7 +274,7 @@ async fn main() -> io::Result<()> {
                         home_dir.join(risc0::RISC0_HOST_MAIN),
                     )
                     .map_err(|e| {
-                        error!("Failed to Clear Risc0 Host File");
+                        error!("Failed to clear Risc0 host file");
                         e
                     })?;
                     return Ok(());
@@ -288,7 +288,7 @@ async fn main() -> io::Result<()> {
                 )?;
                 return Ok(());
             } else {
-                error!("zkRust Directory structure incorrect please consult the README",);
+                error!("zkRust directory structure incorrect please consult the README",);
                 return Ok(());
             }
         }
