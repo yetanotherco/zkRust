@@ -14,7 +14,10 @@ else
 	exit 1
 endif
 
-install: install_risc0 install_sp1
+install: install_zkRust
+
+install_zkRust:
+	@curl -L https://raw.githubusercontent.com/yetanotherco/zkRust/main/install_zkrust.sh | bash
 
 install_sp1:
 	@curl -L https://sp1.succinct.xyz | bash

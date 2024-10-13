@@ -72,7 +72,7 @@ The `zk_rust_io` crate defines function headers that are not inlined and are pur
 To use the I/O imports import the `zk_rust_io` crate by adding the following to the `Cargo.toml` in your project directory.
 
 ```sh
-zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", version = "v0.1.0" }
+zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", tag = "v0.1.0" }
 ```
 
 ### input.rs
@@ -133,13 +133,13 @@ To generate a proof of the execution of your code run the following:
 
 - **SP1**:
   ```sh
-  cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH> .
+  cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH>
   ```
 - **Risc0**:
   ```sh
-  cargo run --release -- prove-risc0  <PROGRAM_DIRECTORY_PATH> .
+  cargo run --release -- prove-risc0  <PROGRAM_DIRECTORY_PATH>
   ```
-  Make sure to have [Risc0](https://dev.risczero.com/api/zkvm/quickstart#1-install-the-risc-zero-toolchain) installed with version `v1.0.1`
+  ***NOTE*** Currently Aligned supports verification of [Risc0](https://dev.risczero.com/api/zkvm/quickstart#1-install-the-risc-zero-toolchain) proofs from release version `v1.0.1`. 
 
 To generate your proof and send it to [Aligned](https://github.com/yetanotherco/aligned_layer). First generate a local wallet keystore using `[cast](https://book.getfoundry.sh/cast/).
 
@@ -167,9 +167,7 @@ cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH> --submit-to-aligned --
 
 - `--rpc-url`: Specifies the rpc-url used for the user eth rpc-url. Defaults to `https://ethereum-holesky-rpc.publicnode.com`.
 
-- `--max-fee`: Specifies the max fee the user is willing to pay for there proof to be included in a batch. Defaults to `0.01 Eth`.
-
-- `--chain_id`: Chain ID number of the ethereum chain Aligned is deployed on. Defaults to `1700`.
+- `--network`: Chain ID number of the ethereum chain Aligned is deployed on. Defaults to `holesky`.
 
 - `--precompiles`: Enables acceleration via precompiles for supported zkVM's. Specifying this flag allows for VM specific speedups for specific expensive operations such as SHA256, SHA3, bigint multiplication, and ed25519 signature verification. By specifying this flag proving operations for specific operations within the following rust crates are accelerated:
 
@@ -187,7 +185,7 @@ cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH> --submit-to-aligned --
     - k256 v0.13.1
     - crypto-bigint v0.5.5
 
-Run one of the following commands to test zkRust. You can choose either Risc0 or SP1:
+After installing the binary and required un one of the following commands to test zkRust. You can choose either Risc0 or SP1:
 
 **Fibonacci**:
 
