@@ -75,7 +75,7 @@ To use the I/O imports import the `zk_rust_io` crate by adding the following to 
 zk_rust_io = { git = "https://github.com/yetanotherco/zkRust.git", tag = "v0.1.0" }
 ```
 
-### input.rs
+### `input()`:
 
 ```rust
 use zk_rust_io;
@@ -90,7 +90,7 @@ pub fn input() {
 }
 ```
 
-### main.rs
+### `main()`
 
 ```rust
 use regex::Regex;
@@ -117,7 +117,7 @@ pub fn main() {
 }
 ```
 
-### output.rs
+### `output()`:
 
 ```rust
 use zk_rust_io;
@@ -159,7 +159,7 @@ Finally, to generate and send your proof of your programs execution to Aligned u
 cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH> --submit-to-aligned --keystore-path <PATH_TO_KEYSTORE>
 ```
 
-### Flags
+### Flags:
 
 - `--submit-to-aligned`: Sends the proof to be verified on Aligned after proof generation. Requires an rpc url and keystore for a funded wallet specified via the `--rpc-url` and `--key_store` flags.
 
@@ -184,6 +184,12 @@ cargo run --release -- prove-sp1 <PROGRAM_DIRECTORY_PATH> --submit-to-aligned --
     - sha2 v0.10.6
     - k256 v0.13.1
     - crypto-bigint v0.5.5
+
+## Support:
+
+For additional support using zkRust or questions please reach out via the [telegram support group](https://t.me/+JEiLahym_lRkNzM0).
+
+## Examples:
 
 After installing the binary and required un one of the following commands to test zkRust. You can choose either Risc0 or SP1:
 
