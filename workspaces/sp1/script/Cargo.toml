@@ -5,7 +5,7 @@ name = "method"
 edition = "2021"
 
 [build-dependencies]
-sp1-helper = "1.0.1"
+sp1-build = "1.0.1"
 
 [dependencies]
 sp1-sdk = { git = "https://github.com/succinctlabs/sp1.git", tag = "v1.0.1" }
