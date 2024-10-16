@@ -1,8 +1,6 @@
-use aligned_sdk::communication::serialization::cbor_serialize;
 use aligned_sdk::core::errors::{AlignedError, SubmitError};
 use ethers::utils::format_units;
 use log::{error, info};
-use risc0::PUBLIC_INPUT_FILE_PATH;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -20,7 +18,6 @@ use dialoguer::Confirm;
 use ethers::prelude::*;
 use ethers::providers::Http;
 use ethers::signers::LocalWallet;
-use ethers::types::U256;
 
 pub mod risc0;
 pub mod sp1;
@@ -166,7 +163,7 @@ pub async fn submit_proof_to_aligned(
         if Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
             .with_prompt(format!(
                 "Would you like to deposit {:?} eth into Aligned to fund proof submission?",
-                estimated_fee
+                format_estimated_fee
             ))
             .interact()
             .map_err(|e| {
@@ -176,7 +173,7 @@ pub async fn submit_proof_to_aligned(
         {
             info!("Submitting deposit to Batcher");
             let Ok(tx_receipt) =
-                deposit_to_aligned(U256::from(estimated_fee), signer, network).await
+                deposit_to_aligned(estimated_fee, signer, network).await
             else {
                 return Err(SubmitError::GenericError(
                     "Failed to Deposit Funds into the Batcher".to_string(),
@@ -214,10 +211,10 @@ pub async fn submit_proof_to_aligned(
     let verification_data = VerificationData {
         proving_system: proof_system_id,
         proof,
-        proof_generator_addr: wallet.address(),
         vm_program_code: Some(elf_data),
         verification_key: None,
         pub_input: pub_input.clone(),
+        proof_generator_addr: wallet.address(),
     };
 
     let nonce = get_next_nonce(&args.rpc_url, wallet.address(), network)
