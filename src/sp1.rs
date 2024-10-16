@@ -67,7 +67,18 @@ pub fn prepare_host(
 }
 
 /// Generates SP1 proof and ELF
-pub fn generate_sp1_proof(script_dir: &PathBuf, current_dir: &PathBuf) -> io::Result<ExitStatus> {
+pub fn generate_sp1_proof(script_dir: &PathBuf, program_dir: &PathBuf, current_dir: &PathBuf) -> io::Result<ExitStatus> {
+    // Generate the ELF in Docker
+    Command::new("cargo")
+        .arg("prove")
+        .arg("build")
+        .arg("--docker")
+        .arg("--tag")
+        .arg("v1.0.1")
+        .current_dir(program_dir)
+        .status()?;
+
+    // Generate the Proof
     Command::new("cargo")
         .arg("run")
         .arg("--release")
