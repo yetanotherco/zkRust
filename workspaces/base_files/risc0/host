@@ -26,21 +26,9 @@ fn main() {
 
     //TODO(pat): remove expects
     std::fs::create_dir_all(current_dir.join("proof_data/risc0")).expect("Failed to create proof_data/sp1");
-    let mut proof_file =
-        std::fs::File::create(&current_dir.join("proof_data/risc0/risc0.proof")).expect("Failed to create SP1 elf file");
-    let mut image_id_file =
-        std::fs::File::create(&current_dir.join("proof_data/risc0/risc0.imageid")).expect("Failed to create SP1 elf file");
-    let mut public_input_file =
-        std::fs::File::create(&current_dir.join("proof_data/risc0/risc0_pub_input.pub")).expect("Failed to create SP1 elf file");
-    proof_file
-        .write_all(&serialized)
-        .expect("Failed write Risc0 proof to file");
-    image_id_file
-        .write_all(&convert(&METHOD_ID))
-        .expect("Failed write Risc0 image id to file");
-    public_input_file
-        .write_all(&receipt.journal.bytes)
-        .expect("Failed write Risc0 image id to file");
+    std::fs::write(&current_dir.join("proof_data/risc0/risc0.proof"), &serialized).expect("Failed to create Risc0 proof file");
+    std::fs::write(&current_dir.join("proof_data/risc0/risc0.imageid"), &METHOD_ID).expect("Failed to create Risc0 Image ID file");
+    std::fs::write(&current_dir.join("proof_data/risc0/risc0_pub_input.pub"), &receipt.journal.bytes).expect("Failed to create Risc0 public input file");
 }
 
 pub fn convert(data: &[u32; 8]) -> [u8; 32] {
