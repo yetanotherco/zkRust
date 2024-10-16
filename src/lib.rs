@@ -1,8 +1,6 @@
-use aligned_sdk::communication::serialization::cbor_serialize;
 use aligned_sdk::core::errors::{AlignedError, SubmitError};
 use ethers::utils::format_units;
 use log::{error, info};
-use risc0::PUBLIC_INPUT_FILE_PATH;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -20,7 +18,6 @@ use dialoguer::Confirm;
 use ethers::prelude::*;
 use ethers::providers::Http;
 use ethers::signers::LocalWallet;
-use ethers::types::U256;
 
 pub mod risc0;
 pub mod sp1;
@@ -82,6 +79,8 @@ pub struct ProofArgs {
     pub batcher_url: String,
 }
 
+const MIN_FEE_PER_PROOF: u128 = 13_000 * 100_000_000; // gas_price = 0.1 Gwei = 0.0000000001 ether (low gas price)
+
 #[derive(Debug, Clone, ValueEnum, Copy)]
 pub enum NetworkArg {
     Devnet,
@@ -137,8 +136,13 @@ pub async fn submit_proof_to_aligned(
 
     let signer = SignerMiddleware::new(provider.clone(), wallet.clone());
 
-    // Estimate fee for proof based on default price estimate.
-    let estimated_fee = estimate_fee(&args.rpc_url, PriceEstimate::Default).await?;
+    // TODO(pat): Add minimum mac fee check in aligned sdk and remove factor of 2 increase in holesky gas price.
+    let mut max_fee = estimate_fee(&args.rpc_url, PriceEstimate::Instant).await?;
+
+    // If estimated fee is below Minimum we use the minimum
+    if max_fee < U256::from(MIN_FEE_PER_PROOF) {
+        max_fee = U256::from(MIN_FEE_PER_PROOF);
+    }
 
     let user_address = wallet.address();
     //TODO: Need to implement Aligned Error for Balance Error
@@ -148,7 +152,7 @@ pub async fn submit_proof_to_aligned(
             SubmitError::GenericError("Failed to retrieve user balance from Aligned".to_string())
         })?;
 
-    let format_estimated_fee = format_units(estimated_fee, "ether").map_err(|e| {
+    let format_max_fee = format_units(max_fee, "ether").map_err(|e| {
         error!("Unable to convert estimated proof submision price");
         SubmitError::GenericError(e.to_string())
     })?;
@@ -158,15 +162,15 @@ pub async fn submit_proof_to_aligned(
         SubmitError::GenericError(e.to_string())
     })?;
 
-    if user_balance < estimated_fee {
+    if user_balance < max_fee {
         info!(
             "Insufficient balance for {:?}: User Balance {:?} eth  < Proof Submission Fee {:?} eth",
-            user_address, format_user_balance, format_estimated_fee
+            user_address, format_user_balance, format_max_fee
         );
         if Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
             .with_prompt(format!(
                 "Would you like to deposit {:?} eth into Aligned to fund proof submission?",
-                estimated_fee
+                format_max_fee
             ))
             .interact()
             .map_err(|e| {
@@ -176,7 +180,7 @@ pub async fn submit_proof_to_aligned(
         {
             info!("Submitting deposit to Batcher");
             let Ok(tx_receipt) =
-                deposit_to_aligned(U256::from(estimated_fee), signer, network).await
+                deposit_to_aligned(max_fee, signer, network).await
             else {
                 return Err(SubmitError::GenericError(
                     "Failed to Deposit Funds into the Batcher".to_string(),
@@ -197,7 +201,7 @@ pub async fn submit_proof_to_aligned(
     if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
         .with_prompt(format!(
             "Would you like to pay {:?} eth to submit your proof to Aligned?",
-            format_estimated_fee
+            format_max_fee
         ))
         .interact()
         .map_err(|e| {
@@ -230,7 +234,7 @@ pub async fn submit_proof_to_aligned(
         &args.rpc_url,
         network,
         &verification_data,
-        estimated_fee,
+        max_fee,
         wallet,
         nonce,
     )
