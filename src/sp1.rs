@@ -21,6 +21,7 @@ pub const SP1_GUEST_CARGO_TOML: &str = "workspaces/sp1/program/Cargo.toml";
 // Proof data generation paths
 pub const SP1_ELF_PATH: &str = "./proof_data/sp1/sp1.elf";
 pub const SP1_PROOF_PATH: &str = "./proof_data/sp1/sp1.proof";
+pub const SP1_PUB_INPUT_PATH: &str = "./proof_data/sp1/sp1.pub";
 
 /// SP1 header added to programs for generating proofs of their execution
 pub const SP1_GUEST_PROGRAM_HEADER: &str = "#![no_main]\nsp1_zkvm::entrypoint!(main);\n";
