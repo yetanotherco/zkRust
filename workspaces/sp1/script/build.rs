@@ -1,5 +1,9 @@
-use sp1_helper::build_program;
+use sp1_build::{build_program_with_args, BuildArgs};
 
 fn main() {
-    build_program("../program")
+    let args = BuildArgs {
+        docker: true,
+        ..Default::default()
+    };
+    build_program_with_args("../program", args);
 }

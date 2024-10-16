@@ -416,5 +416,8 @@ pub fn prepare_guest(
     // Write to guest
     let mut file = fs::File::create(guest_main_file_path)?;
     file.write_all(guest_program.as_bytes())?;
+
+    //Remove zk_rust_io import
+    crate::utils::remove_lines(guest_main_file_path, "use zk_rust_io;")?;
     Ok(())
 }

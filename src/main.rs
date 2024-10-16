@@ -110,7 +110,8 @@ async fn main() -> io::Result<()> {
                 }
 
                 let script_dir = home_dir.join(sp1::SP1_SCRIPT_DIR);
-                if sp1::generate_sp1_proof(&script_dir, &current_dir)?.success() {
+                let program_dir = home_dir.join(sp1::SP1_SRC_DIR);
+                if sp1::generate_sp1_proof(&script_dir, &program_dir, &current_dir)?.success() {
                     info!("SP1 proof and ELF generated");
 
                     utils::replace(
@@ -124,7 +125,7 @@ async fn main() -> io::Result<()> {
                         submit_proof_to_aligned(
                             sp1::SP1_PROOF_PATH,
                             sp1::SP1_ELF_PATH,
-                            None,
+                            Some(sp1::SP1_PUB_INPUT_PATH),
                             args,
                             ProvingSystemId::SP1,
                         )
