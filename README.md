@@ -277,7 +277,7 @@ make prove_sp1_zkquiz
 
 # Acknowledgments:
 
-ZK Rust was intended and designed as a tool to make development on programs that use zkVM's easier and reduce deduplication of code for developers that want to experiment with zk on Aligned layer. We want the work and contributions of the SP1 and Risc0 teams to the field of Zero Knowledge Cryptography, and building the provers that work as the backbone of zkRust.
+ZK Rust was intended and designed as a tool to make development on programs that use zkVM's easier and reduce deduplication of code for developers that want to experiment with zk on Aligned layer. We want to thank for the work and contributions of the SP1 and Risc0 teams to the field of Zero Knowledge Cryptography, and building the provers that work as the backbone of zkRust, and also for providing the examples ours are derived from.
 
 [SP1](https://github.com/succinctlabs/sp1.git)
 
