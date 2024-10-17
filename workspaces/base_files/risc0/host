@@ -2,7 +2,6 @@
 // The ELF is used for proving and the ID is used for verification.
 use methods::{METHOD_ELF, METHOD_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv};
-use std::io::Write;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
