@@ -27,8 +27,8 @@ fn main() {
     //TODO(pat): remove expects
     std::fs::create_dir_all(current_dir.join("proof_data/risc0")).expect("Failed to create proof_data/sp1");
     std::fs::write(&current_dir.join("proof_data/risc0/risc0.proof"), &serialized).expect("Failed to create Risc0 proof file");
-    std::fs::write(&current_dir.join("proof_data/risc0/risc0.imageid"), &METHOD_ID).expect("Failed to create Risc0 Image ID file");
-    std::fs::write(&current_dir.join("proof_data/risc0/risc0_pub_input.pub"), &receipt.journal.bytes).expect("Failed to create Risc0 public input file");
+    std::fs::write(&current_dir.join("proof_data/risc0/risc0.imageid"), &convert(&METHOD_ID)).expect("Failed to create Risc0 Image ID file");
+    std::fs::write(&current_dir.join("proof_data/risc0/risc0.pub"), &receipt.journal.bytes).expect("Failed to create Risc0 public input file");
 }
 
 pub fn convert(data: &[u32; 8]) -> [u8; 32] {

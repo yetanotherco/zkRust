@@ -21,7 +21,7 @@ pub const RISC0_GUEST_CARGO_TOML: &str = "workspaces/risc0/methods/guest/Cargo.t
 // Proof data generation paths
 pub const PROOF_FILE_PATH: &str = "./proof_data/risc0/risc0.proof";
 pub const IMAGE_ID_FILE_PATH: &str = "./proof_data/risc0/risc0.imageid";
-pub const PUBLIC_INPUT_FILE_PATH: &str = "./proof_data/risc0/risc0_pub_input.pub";
+pub const PUBLIC_INPUT_FILE_PATH: &str = "./proof_data/risc0/risc0.pub";
 
 //TODO: should we use std or no_std header
 /// RISC0 header added to programs for generating proofs of their execution
