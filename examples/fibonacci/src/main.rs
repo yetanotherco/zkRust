@@ -23,8 +23,9 @@ fn input() {
 }
 
 fn output() {
-    let (a, b): (u32, u32) = zk_rust_io::out();
+    let (n, a, b): (u32, u32, u32) = zk_rust_io::out();
 
+    println!("n: {}", n);
     println!("a: {}", a);
     println!("b: {}", b);
 }

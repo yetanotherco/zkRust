@@ -124,7 +124,7 @@ async fn main() -> io::Result<()> {
                         submit_proof_to_aligned(
                             sp1::SP1_PROOF_PATH,
                             sp1::SP1_ELF_PATH,
-                            None,
+                            Some(sp1::SP1_PUB_INPUT_PATH),
                             args,
                             ProvingSystemId::SP1,
                         )
