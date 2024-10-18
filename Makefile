@@ -73,13 +73,13 @@ prove_sp1_json:
 	@RUST_LOG=info cargo run --release -- prove-sp1 examples/json
 
 prove_sp1_regex:
-	@RUST_LOG=info cargo run --release -- prove-risc0 examples/regex
+	@RUST_LOG=info cargo run --release -- prove-sp1 examples/regex
 
 prove_sp1_sha:
-	@RUST_LOG=info cargo run --release -- prove-risc0 examples/sha
+	@RUST_LOG=info cargo run --release -- prove-sp1 examples/sha
 
 prove_sp1_tendermint:
-	@RUST_LOG=info cargo run --release -- prove-risc0 examples/tendermint
+	@RUST_LOG=info cargo run --release -- prove-sp1 examples/tendermint
 
 prove_sp1_zkquiz:
-	@RUST_LOG=info cargo run --release -- prove-risc0 examples/zkquiz
+	@RUST_LOG=info cargo run --release -- prove-sp1 examples/zkquiz
