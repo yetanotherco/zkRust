@@ -49,7 +49,7 @@ pub struct ProofArgs {
     )]
     pub network: NetworkArg,
     #[clap(
-        name = "Payment send to the BatcherServicContract to fund Proof submission (Wei)",
+        name = "Payment sent to the BatcherServiceContract to fund Proof submission (Wei)",
         long = "batcher-payment",
         default_value("4000000000000000")
     )]
@@ -153,12 +153,12 @@ pub async fn submit_proof_to_aligned(
         })?;
 
     let format_max_fee = format_units(max_fee, "ether").map_err(|e| {
-        error!("Unable to convert estimated proof submision price");
+        error!("Unable to convert estimated proof submission price");
         SubmitError::GenericError(e.to_string())
     })?;
 
     let format_user_balance = format_units(user_balance, "ether").map_err(|e| {
-        error!("Unable to convert estimated proof submision price");
+        error!("Unable to convert estimated proof submission price");
         SubmitError::GenericError(e.to_string())
     })?;
 
